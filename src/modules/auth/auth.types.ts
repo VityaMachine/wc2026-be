@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client';
+export type AuthUserRole = 'USER' | 'ADMIN';
 
 export interface RegisterRequest {
   email: string;
@@ -19,7 +19,7 @@ export interface AuthUserDto {
   username: string;
   firstName: string;
   lastName: string;
-  role: UserRole;
+  role: AuthUserRole;
   isEmailVerified: boolean;
 }
 
