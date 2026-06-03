@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ParticipantType {
+  FREE
+  PAID
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+  CANCELLED
+}
+
+enum MatchStage {
+  GROUP
+  ROUND_OF_32
+  ROUND_OF_16
+  QUARTER_FINAL
+  SEMI_FINAL
+  THIRD_PLACE
+  FINAL
+}
+
+enum PaymentProvider {
+  MONOBANK
+}
+
+// Models
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// Models
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  username        String    @unique
+  firstName       String
+  lastName        String
+  role            UserRole  @default(USER)
+  isEmailVerified Boolean   @default(false)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // relations
+  predictions             Prediction[]
+  payments                Payment[]
+  tournamentParticipants  TournamentParticipant[]
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+model Tournament {
+  id                     String    @id @default(cuid())
+  name                   String
+  slug                   String    @unique
+  startsAt               DateTime
+  endsAt                 DateTime?
+  prizePoolEntryDeadline DateTime
+  entryFee               Decimal   @db.Decimal(10, 2)
+  currency               String    @default("UAH")
+  isPrizePoolEnabled     Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  // relations
+  participants TournamentParticipant[]
+  teams        Team[]
+  matches      Match[]
+  payments     Payment[]
+  predictions  Prediction[]
+}
+
+model TournamentParticipant {
+  id            String          @id @default(cuid())
+  user          User            @relation(fields: [userId], references: [id])
+  userId        String
+  tournament    Tournament      @relation(fields: [tournamentId], references: [id])
+  tournamentId  String
+  type          ParticipantType @default(FREE)
+  joinedAt      DateTime        @default(now())
+  paidAt        DateTime?
+  paymentStatus PaymentStatus   @default(UNPAID)
+  prizeEligible Boolean         @default(false)
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([userId, tournamentId])
+  @@index([tournamentId])
+  @@index([prizeEligible])
+}
+
+model Team {
+  id           String     @id @default(cuid())
+  name         String
+  externalId   Int?
+  code         String?
+  logoUrl      String?
+  groupName    String?
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  tournamentId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // relations for matches where this team is home or away
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+
+  @@unique([externalId, tournamentId])
+}
+
+model Match {
+  id                String      @id @default(cuid())
+  tournament        Tournament  @relation(fields: [tournamentId], references: [id])
+  tournamentId      String
+  homeTeam          Team?       @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  homeTeamId        String?
+  awayTeam          Team?       @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  awayTeamId        String?
+  externalFixtureId Int?
+  startsAt          DateTime
+  status            MatchStatus @default(SCHEDULED)
+  stage             MatchStage
+  groupName         String?
+  venueName         String?
+  city              String?
+  // Regular-time scores only
+  homeScore         Int?
+  awayScore         Int?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  predictions Prediction[]
+
+  @@unique([externalFixtureId, tournamentId])
+  @@index([tournamentId])
+  @@index([startsAt])
+  @@index([status])
+}
+
+model Prediction {
+  id           String     @id @default(cuid())
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String
+  match        Match      @relation(fields: [matchId], references: [id])
+  matchId      String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  tournamentId String
+  homeScore    Int
+  awayScore    Int
+  confirmedAt  DateTime   @default(now())
+  points       Int?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, matchId])
+  @@index([tournamentId])
+  @@index([matchId])
+}
+
+model Payment {
+  id           String          @id @default(cuid())
+  user         User            @relation(fields: [userId], references: [id])
+  userId       String
+  tournament   Tournament      @relation(fields: [tournamentId], references: [id])
+  tournamentId String
+  amount       Decimal         @db.Decimal(10, 2)
+  currency     String          @default("UAH")
+  provider     PaymentProvider @default(MONOBANK)
+  status       PaymentStatus   @default(PENDING)
+  // monobank-specific fields
+  invoiceId    String?
+  paymentUrl   String?
+  paidAt       DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([tournamentId])
+  @@index([status])
+  @@index([invoiceId])
+}
