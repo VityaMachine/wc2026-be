@@ -103,7 +103,9 @@ export const predictionsService = {
     }));
   },
 
-  async getUserPredictionStats(userId: string): Promise<PredictionStatsResponse> {
+  async getUserPredictionStats(
+    userId: string,
+  ): Promise<PredictionStatsResponse> {
     const [predictionsCount, calculatedPredictionsCount, pointsAggregate] =
       await Promise.all([
         predictionsRepository.countByUserId(userId),

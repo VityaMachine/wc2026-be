@@ -40,3 +40,15 @@ export interface PredictionStatsResponse {
   totalPoints: number;
   averagePoints: number;
 }
+
+export interface MatchPredictionResponse {
+  id: string;
+  matchId: string;
+  userId: string;
+  username: string;
+  homeScore: number;
+  awayScore: number;
+  points: number | null;
+  calculatedAt: Date | null;
+  createdAt: Date;
+}

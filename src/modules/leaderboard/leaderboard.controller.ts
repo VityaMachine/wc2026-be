@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import { leaderboardService } from './leaderboard.service';
+import { Request, Response } from "express";
+import { leaderboardService } from "./leaderboard.service";
 
 export class LeaderboardController {
   async getLeaderboard(req: Request, res: Response) {

@@ -67,6 +67,30 @@ export const predictionsRepository = {
     });
   },
 
+  findDisplayByMatchId(matchId: string) {
+    return prisma.prediction.findMany({
+      where: { matchId },
+      select: {
+        id: true,
+        matchId: true,
+        userId: true,
+        homeScore: true,
+        awayScore: true,
+        points: true,
+        calculatedAt: true,
+        createdAt: true,
+        user: {
+          select: {
+            username: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+  },
+
   countByUserId(userId: string) {
     return prisma.prediction.count({
       where: { userId },

@@ -1,8 +1,8 @@
-import { tournamentsRepository } from './tournaments.repository';
+import { tournamentsRepository } from "./tournaments.repository";
 import {
   JoinTournamentRequest,
   TournamentParticipantResponse,
-} from './tournaments.types';
+} from "./tournaments.types";
 
 export class TournamentsService {
   async list() {
@@ -20,7 +20,7 @@ export class TournamentsService {
   async getBySlug(slug: string) {
     const t = await tournamentsRepository.findBySlug(slug);
     if (!t) {
-      const err = new Error('Tournament not found');
+      const err = new Error("Tournament not found");
       (err as any).status = 404;
       throw err;
     }
@@ -44,13 +44,13 @@ export class TournamentsService {
     request: JoinTournamentRequest,
   ): Promise<TournamentParticipantResponse> {
     const participationType = request.participationType;
-    if (participationType !== 'FREE' && participationType !== 'PAID') {
-      throw { status: 400, message: 'participationType must be FREE or PAID' };
+    if (participationType !== "FREE" && participationType !== "PAID") {
+      throw { status: 400, message: "participationType must be FREE or PAID" };
     }
 
     const tournament = await tournamentsRepository.findBySlug(slug);
     if (!tournament) {
-      throw { status: 404, message: 'Tournament not found' };
+      throw { status: 404, message: "Tournament not found" };
     }
 
     const existingParticipant = await tournamentsRepository.findParticipant(
@@ -61,7 +61,7 @@ export class TournamentsService {
     if (existingParticipant) {
       throw {
         status: 409,
-        message: 'User has already joined this tournament',
+        message: "User has already joined this tournament",
       };
     }
 

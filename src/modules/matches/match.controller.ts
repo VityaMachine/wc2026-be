@@ -53,6 +53,22 @@ class MatchController {
       next(error);
     }
   }
+
+  async getPredictions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const matchId = req.params.id as string;
+      const predictions = await matchService.getMatchPredictions(matchId);
+      res.json(predictions);
+    } catch (error: unknown) {
+      const typedError = error as { status?: number; message?: string };
+      if (typedError.status) {
+        return res
+          .status(typedError.status)
+          .json({ message: typedError.message });
+      }
+      next(error);
+    }
+  }
 }
 
 export const matchController = new MatchController();

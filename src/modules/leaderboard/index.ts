@@ -1,1 +1,1 @@
-export { default } from './leaderboard.routes';
+export { default } from "./leaderboard.routes";

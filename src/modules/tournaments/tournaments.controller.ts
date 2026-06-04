@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { tournamentsService } from './tournaments.service';
-import { JoinTournamentRequest } from './tournaments.types';
+import { Request, Response, NextFunction } from "express";
+import { tournamentsService } from "./tournaments.service";
+import { JoinTournamentRequest } from "./tournaments.types";
 
 class TournamentsController {
   async list(_req: Request, res: Response, next: NextFunction) {
@@ -26,7 +26,7 @@ class TournamentsController {
     try {
       const userId = req.user?.userId;
       if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized' });
+        return res.status(401).json({ message: "Unauthorized" });
       }
 
       const { slug } = req.params;

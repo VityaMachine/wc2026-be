@@ -1,5 +1,5 @@
-import { leaderboardRepository } from './leaderboard.repository';
-import { LeaderboardEntry } from './leaderboard.types';
+import { leaderboardRepository } from "./leaderboard.repository";
+import { LeaderboardEntry } from "./leaderboard.types";
 
 export class LeaderboardService {
   async getLeaderboard(): Promise<LeaderboardEntry[]> {

@@ -1,9 +1,9 @@
-import { prisma } from '../../lib/prisma';
+import { prisma } from "../../lib/prisma";
 
 export const tournamentsRepository = {
   async findAll() {
     return prisma.tournament.findMany({
-      orderBy: { startsAt: 'asc' },
+      orderBy: { startsAt: "asc" },
       select: {
         id: true,
         slug: true,
@@ -45,7 +45,7 @@ export const tournamentsRepository = {
   async createParticipant(data: {
     userId: string;
     tournamentId: string;
-    participationType: 'FREE' | 'PAID';
+    participationType: "FREE" | "PAID";
   }) {
     return prisma.tournamentParticipant.create({
       data: {

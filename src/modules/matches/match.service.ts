@@ -1,6 +1,7 @@
 import { matchRepository } from "./match.repository";
 import { predictionsRepository } from "../predictions/predictions.repository";
 import { scoringService } from "../scoring/scoring.service";
+import { MatchPredictionResponse } from "../predictions/predictions.types";
 
 export class MatchService {
   async list(tournamentId?: string) {
@@ -145,6 +146,31 @@ export class MatchService {
       },
       results,
     };
+  }
+
+  async getMatchPredictions(
+    matchId: string,
+  ): Promise<MatchPredictionResponse[]> {
+    const match = await matchRepository.findById(matchId);
+    if (!match) {
+      throw { status: 404, message: "Match not found" };
+    }
+
+    const predictions =
+      await predictionsRepository.findDisplayByMatchId(matchId);
+
+    return predictions.map((prediction) => ({
+      id: prediction.id,
+      matchId: prediction.matchId,
+      userId: prediction.userId,
+      username: prediction.user.username,
+      homeScore: prediction.homeScore,
+      awayScore: prediction.awayScore,
+      points:
+        prediction.points !== null ? Number(prediction.points) : null,
+      calculatedAt: prediction.calculatedAt,
+      createdAt: prediction.createdAt,
+    }));
   }
 }
 

@@ -1,9 +1,9 @@
-import { prisma } from '../../lib/prisma';
+import { prisma } from "../../lib/prisma";
 
 export const leaderboardRepository = {
   async getLeaderboardData() {
     const totalGroups = await prisma.prediction.groupBy({
-      by: ['userId'],
+      by: ["userId"],
       _count: {
         _all: true,
       },
@@ -13,7 +13,7 @@ export const leaderboardRepository = {
     });
 
     const calculatedGroups = await prisma.prediction.groupBy({
-      by: ['userId'],
+      by: ["userId"],
       where: {
         points: {
           not: null,
@@ -45,7 +45,7 @@ export const leaderboardRepository = {
 
     return totalGroups.map((group) => ({
       userId: group.userId,
-      username: userMap.get(group.userId) ?? '',
+      username: userMap.get(group.userId) ?? "",
       totalPoints: group._sum.points ? Number(group._sum.points) : 0,
       predictionsCount: group._count._all,
       calculatedPredictionsCount: calculatedMap.get(group.userId) ?? 0,

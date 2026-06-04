@@ -1,4 +1,4 @@
-export type ParticipationType = 'FREE' | 'PAID';
+export type ParticipationType = "FREE" | "PAID";
 
 export interface JoinTournamentRequest {
   participationType: ParticipationType;
