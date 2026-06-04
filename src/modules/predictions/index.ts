@@ -1,7 +1,3 @@
-import { Router } from 'express';
+import predictionsRouter from './predictions.routes';
 
-const router = Router();
-
-router.get('/', (_req, res) => res.json({ module: 'predictions' }));
-
-export default router;
+export default predictionsRouter;

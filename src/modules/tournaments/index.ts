@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../utils/async-handler';
+import { tournamentsController } from './tournaments.controller';
 
 const router = Router();
 
-// Module routes will be implemented later.
-router.get('/', (_req, res) => res.json({ module: 'tournaments' }));
+router.get('/:slug', asyncHandler(tournamentsController.getBySlug));
+router.get('/', asyncHandler(tournamentsController.list));
 
 export default router;

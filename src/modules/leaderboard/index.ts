@@ -1,7 +1,1 @@
-import { Router } from 'express';
-
-const router = Router();
-
-router.get('/', (_req, res) => res.json({ module: 'leaderboard' }));
-
-export default router;
+export { default } from './leaderboard.routes';
