@@ -1,0 +1,109 @@
+diff --git a/src/modules/matches/match.controller.ts b/src/modules/matches/match.controller.ts
+index eeeb579..8f807b8 100644
+--- a/src/modules/matches/match.controller.ts
++++ b/src/modules/matches/match.controller.ts
+@@ -55,9 +55,17 @@ class MatchController {
+   }
+ 
+   async getPredictions(req: Request, res: Response, next: NextFunction) {
++    const userId = req.user?.userId;
++    if (!userId) {
++      return res.status(401).json({ message: "Unauthorized" });
++    }
++
+     try {
+       const matchId = req.params.id as string;
+-      const predictions = await matchService.getMatchPredictions(matchId);
++      const predictions = await matchService.getMatchPredictions(
++        matchId,
++        userId,
++      );
+       res.json(predictions);
+     } catch (error: unknown) {
+       const typedError = error as { status?: number; message?: string };
+diff --git a/src/modules/matches/match.service.ts b/src/modules/matches/match.service.ts
+index b00a99e..8178307 100644
+--- a/src/modules/matches/match.service.ts
++++ b/src/modules/matches/match.service.ts
+@@ -1,7 +1,7 @@
+ import { matchRepository } from "./match.repository";
+ import { predictionsRepository } from "../predictions/predictions.repository";
+ import { scoringService } from "../scoring/scoring.service";
+-import { MatchPredictionResponse } from "../predictions/predictions.types";
++import { MatchPredictionsVisibilityResponse } from "../predictions/predictions.types";
+ 
+ export class MatchService {
+   async list(tournamentId?: string) {
+@@ -150,27 +150,45 @@ export class MatchService {
+ 
+   async getMatchPredictions(
+     matchId: string,
+-  ): Promise<MatchPredictionResponse[]> {
++    currentUserId: string,
++  ): Promise<MatchPredictionsVisibilityResponse> {
+     const match = await matchRepository.findById(matchId);
+     if (!match) {
+       throw { status: 404, message: "Match not found" };
+     }
+ 
++    const ownPrediction = await predictionsRepository.findByUserAndMatch(
++      currentUserId,
++      matchId,
++    );
++
++    if (!ownPrediction) {
++      return {
++        canViewPredictions: false,
++        hasOwnPrediction: false,
++        predictions: [],
++      };
++    }
++
+     const predictions =
+       await predictionsRepository.findDisplayByMatchId(matchId);
+ 
+-    return predictions.map((prediction) => ({
+-      id: prediction.id,
+-      matchId: prediction.matchId,
+-      userId: prediction.userId,
+-      username: prediction.user.username,
+-      homeScore: prediction.homeScore,
+-      awayScore: prediction.awayScore,
+-      points:
+-        prediction.points !== null ? Number(prediction.points) : null,
+-      calculatedAt: prediction.calculatedAt,
+-      createdAt: prediction.createdAt,
+-    }));
++    return {
++      canViewPredictions: true,
++      hasOwnPrediction: true,
++      predictions: predictions.map((prediction) => ({
++        id: prediction.id,
++        matchId: prediction.matchId,
++        userId: prediction.userId,
++        username: prediction.user.username,
++        homeScore: prediction.homeScore,
++        awayScore: prediction.awayScore,
++        points:
++          prediction.points !== null ? Number(prediction.points) : null,
++        calculatedAt: prediction.calculatedAt,
++        createdAt: prediction.createdAt,
++      })),
++    };
+   }
+ }
+ 
+diff --git a/src/modules/predictions/predictions.types.ts b/src/modules/predictions/predictions.types.ts
+index 0c041ed..d86204a 100644
+--- a/src/modules/predictions/predictions.types.ts
++++ b/src/modules/predictions/predictions.types.ts
+@@ -52,3 +52,9 @@ export interface MatchPredictionResponse {
+   calculatedAt: Date | null;
+   createdAt: Date;
+ }
++
++export interface MatchPredictionsVisibilityResponse {
++  canViewPredictions: boolean;
++  hasOwnPrediction: boolean;
++  predictions: MatchPredictionResponse[];
++}

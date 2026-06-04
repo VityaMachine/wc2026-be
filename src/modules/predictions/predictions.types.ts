@@ -52,3 +52,9 @@ export interface MatchPredictionResponse {
   calculatedAt: Date | null;
   createdAt: Date;
 }
+
+export interface MatchPredictionsVisibilityResponse {
+  canViewPredictions: boolean;
+  hasOwnPrediction: boolean;
+  predictions: MatchPredictionResponse[];
+}

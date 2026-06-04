@@ -55,9 +55,17 @@ class MatchController {
   }
 
   async getPredictions(req: Request, res: Response, next: NextFunction) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     try {
       const matchId = req.params.id as string;
-      const predictions = await matchService.getMatchPredictions(matchId);
+      const predictions = await matchService.getMatchPredictions(
+        matchId,
+        userId,
+      );
       res.json(predictions);
     } catch (error: unknown) {
       const typedError = error as { status?: number; message?: string };
