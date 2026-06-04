@@ -30,4 +30,29 @@ export const tournamentsRepository = {
       },
     });
   },
+
+  async findParticipant(userId: string, tournamentId: string) {
+    return prisma.tournamentParticipant.findUnique({
+      where: {
+        userId_tournamentId: {
+          userId,
+          tournamentId,
+        },
+      },
+    });
+  },
+
+  async createParticipant(data: {
+    userId: string;
+    tournamentId: string;
+    participationType: 'FREE' | 'PAID';
+  }) {
+    return prisma.tournamentParticipant.create({
+      data: {
+        userId: data.userId,
+        tournamentId: data.tournamentId,
+        type: data.participationType,
+      },
+    });
+  },
 };
