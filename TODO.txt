@@ -1,0 +1,13 @@
+TODO:
+Implement FIFA World Cup 2026 Round of 32 bracket generation
+using Annex C official mapping (495 combinations).
+
+
+
+Step 24 — Swagger/OpenAPI setup
+Step 25 — User profile endpoints
+Step 26 — Frontend readiness: match filters
+Step 27 — Current tournament endpoint
+Step 28 — My tournament state endpoint
+Step 29 — Email verification service
+Step 30 — Admin endpoints polish
