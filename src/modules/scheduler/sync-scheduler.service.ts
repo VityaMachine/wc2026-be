@@ -1,9 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { apiFootballSyncService } from "../api-football/api-football.sync.service";
-
-const WORLD_CUP_SEASON = 2026;
-const REGULAR_SYNC_INTERVAL_MS = 3 * 60 * 60 * 1000;
-const LIVE_SYNC_INTERVAL_MS = 60 * 1000;
+import { env } from "../../config/env";
 
 type SyncReason = "regular" | "live";
 
@@ -14,20 +11,32 @@ export class SyncSchedulerService {
   private liveSyncTimer?: ReturnType<typeof setInterval>;
 
   startScheduler() {
+    if (!env.API_FOOTBALL_SCHEDULER_ENABLED) {
+      console.log("API-Football sync scheduler disabled");
+      return;
+    }
+
     if (this.isStarted) {
       return;
     }
 
     this.isStarted = true;
     console.log("API-Football sync scheduler started");
+    console.log(`Season: ${env.API_FOOTBALL_SEASON}`);
+    console.log(
+      `Regular sync interval: ${env.API_FOOTBALL_REGULAR_SYNC_INTERVAL_MS} ms`,
+    );
+    console.log(
+      `Live sync interval: ${env.API_FOOTBALL_LIVE_SYNC_INTERVAL_MS} ms`,
+    );
 
     this.regularSyncTimer = setInterval(() => {
       void this.syncFixtures("regular");
-    }, REGULAR_SYNC_INTERVAL_MS);
+    }, env.API_FOOTBALL_REGULAR_SYNC_INTERVAL_MS);
 
     this.liveSyncTimer = setInterval(() => {
       void this.syncLiveFixturesIfNeeded();
-    }, LIVE_SYNC_INTERVAL_MS);
+    }, env.API_FOOTBALL_LIVE_SYNC_INTERVAL_MS);
   }
 
   stopScheduler() {
@@ -42,6 +51,7 @@ export class SyncSchedulerService {
     this.regularSyncTimer = undefined;
     this.liveSyncTimer = undefined;
     this.isStarted = false;
+    this.isSyncRunning = false;
   }
 
   private async syncLiveFixturesIfNeeded() {
@@ -71,7 +81,9 @@ export class SyncSchedulerService {
 
     try {
       const result =
-        await apiFootballSyncService.syncWorldCupFixtures(WORLD_CUP_SEASON);
+        await apiFootballSyncService.syncWorldCupFixtures(
+          env.API_FOOTBALL_SEASON,
+        );
 
       console.log(`API-Football ${reason} sync finished`, result);
     } catch (error) {
