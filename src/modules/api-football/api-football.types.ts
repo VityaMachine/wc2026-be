@@ -17,6 +17,10 @@ export interface ApiFootballFixture {
   fixture: {
     id: number;
     date: string;
+    venue: {
+      name: string | null;
+      city: string | null;
+    };
     status: {
       short: string;
       long: string;
@@ -32,10 +36,12 @@ export interface ApiFootballFixture {
     home: {
       id: number;
       name: string;
+      logo: string;
     };
     away: {
       id: number;
       name: string;
+      logo: string;
     };
   };
   goals: {

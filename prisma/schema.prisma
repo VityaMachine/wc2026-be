@@ -159,6 +159,10 @@ model Match {
   // Regular-time scores only
   homeScore         Int?
   awayScore         Int?
+  homeExtraTimeScore Int?
+  awayExtraTimeScore Int?
+  homePenaltyScore   Int?
+  awayPenaltyScore   Int?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
