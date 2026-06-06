@@ -2,6 +2,7 @@ import { matchRepository } from "./match.repository";
 import { predictionsRepository } from "../predictions/predictions.repository";
 import { scoringService } from "../scoring/scoring.service";
 import { MatchPredictionsVisibilityResponse } from "../predictions/predictions.types";
+import { HttpError } from "../../lib/http-error";
 
 export class MatchService {
   async list(tournamentId?: string) {
@@ -19,6 +20,49 @@ export class MatchService {
         ? { id: m.awayTeam.id, name: m.awayTeam.name, code: m.awayTeam.code }
         : null,
     }));
+  }
+
+  async getById(matchId: string) {
+    const match = await matchRepository.findDetailsById(matchId);
+    if (!match) {
+      throw new HttpError(404, "Match not found");
+    }
+
+    return {
+      id: match.id,
+      externalFixtureId: match.externalFixtureId,
+      stage: match.stage,
+      groupName: match.groupName,
+      status: match.status,
+      startsAt: match.startsAt,
+      elapsed: match.elapsed,
+      homeTeam: match.homeTeam
+        ? {
+            id: match.homeTeam.id,
+            externalId: match.homeTeam.externalId,
+            name: match.homeTeam.name,
+            logoUrl: match.homeTeam.logoUrl,
+          }
+        : null,
+      awayTeam: match.awayTeam
+        ? {
+            id: match.awayTeam.id,
+            externalId: match.awayTeam.externalId,
+            name: match.awayTeam.name,
+            logoUrl: match.awayTeam.logoUrl,
+          }
+        : null,
+      homeScore: match.homeScore,
+      awayScore: match.awayScore,
+      homeExtraTimeScore: match.homeExtraTimeScore,
+      awayExtraTimeScore: match.awayExtraTimeScore,
+      homePenaltyScore: match.homePenaltyScore,
+      awayPenaltyScore: match.awayPenaltyScore,
+      venueName: match.venueName,
+      city: match.city,
+      createdAt: match.createdAt,
+      updatedAt: match.updatedAt,
+    };
   }
 
   async setResult(matchId: string, homeScore: number, awayScore: number) {
@@ -49,7 +93,7 @@ export class MatchService {
     // Check if match exists
     const match = await matchRepository.findById(matchId);
     if (!match) {
-      throw { status: 404, message: "Match not found" };
+      throw new HttpError(404, "Match not found");
     }
 
     // Update the match result
@@ -75,7 +119,7 @@ export class MatchService {
     // Check if match exists
     const match = await matchRepository.findById(matchId);
     if (!match) {
-      throw { status: 404, message: "Match not found" };
+      throw new HttpError(404, "Match not found");
     }
 
     // Check if match is finished and has actual scores
@@ -159,7 +203,7 @@ export class MatchService {
   ): Promise<MatchPredictionsVisibilityResponse> {
     const match = await matchRepository.findById(matchId);
     if (!match) {
-      throw { status: 404, message: "Match not found" };
+      throw new HttpError(404, "Match not found");
     }
 
     const ownPrediction = await predictionsRepository.findByUserAndMatch(

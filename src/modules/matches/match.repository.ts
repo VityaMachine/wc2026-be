@@ -18,6 +18,30 @@ export const matchRepository = {
     });
   },
 
+  async findDetailsById(id: string) {
+    return prisma.match.findUnique({
+      where: { id },
+      include: {
+        homeTeam: {
+          select: {
+            id: true,
+            externalId: true,
+            name: true,
+            logoUrl: true,
+          },
+        },
+        awayTeam: {
+          select: {
+            id: true,
+            externalId: true,
+            name: true,
+            logoUrl: true,
+          },
+        },
+      },
+    });
+  },
+
   async updateResult(id: string, homeScore: number, awayScore: number) {
     return prisma.match.update({
       where: { id },

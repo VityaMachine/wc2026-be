@@ -12,6 +12,22 @@ class MatchController {
     }
   }
 
+  async getById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const matchId = req.params.id as string;
+      const match = await matchService.getById(matchId);
+      res.json(match);
+    } catch (error: unknown) {
+      const typedError = error as { status?: number; message?: string };
+      if (typedError.status) {
+        return res
+          .status(typedError.status)
+          .json({ message: typedError.message });
+      }
+      next(error);
+    }
+  }
+
   async setResult(req: Request, res: Response, next: NextFunction) {
     try {
       const matchId = req.params.id as string;
