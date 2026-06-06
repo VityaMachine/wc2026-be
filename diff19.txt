@@ -1,0 +1,15 @@
+diff --git a/src/server.ts b/src/server.ts
+index 771578d..b06c5aa 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -1,8 +1,10 @@
+ import app from './app';
+ import { env } from './config/env';
++import { syncSchedulerService } from './modules/scheduler/sync-scheduler.service';
+ 
+ const PORT = env.PORT ? Number(env.PORT) : 3000;
+ 
+ app.listen(PORT, () => {
+   console.log(`API server is running on port ${PORT}`);
++  syncSchedulerService.startScheduler();
+ });
