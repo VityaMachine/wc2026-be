@@ -550,7 +550,8 @@ export const swaggerSpec = swaggerJSDoc({
       "/api/v1/matches/{id}/result": {
         patch: {
           tags: ["Matches"],
-          summary: "Update match result",
+          summary: "ADMIN only: update match result",
+          security: [{ bearerAuth: [] }],
           parameters: [
             {
               name: "id",
@@ -577,6 +578,8 @@ export const swaggerSpec = swaggerJSDoc({
           responses: {
             200: { description: "Result updated" },
             400: { description: "Invalid score" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
             404: { description: "Match not found" },
           },
         },
@@ -584,7 +587,8 @@ export const swaggerSpec = swaggerJSDoc({
       "/api/v1/matches/{id}/calculate": {
         post: {
           tags: ["Matches"],
-          summary: "Manually calculate prediction points for a match",
+          summary: "ADMIN only: manually calculate prediction points for a match",
+          security: [{ bearerAuth: [] }],
           parameters: [
             {
               name: "id",
@@ -596,6 +600,8 @@ export const swaggerSpec = swaggerJSDoc({
           responses: {
             200: { description: "Prediction points calculated" },
             400: { description: "Match result is not ready" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
             404: { description: "Match not found" },
           },
         },
@@ -687,6 +693,18 @@ export const swaggerSpec = swaggerJSDoc({
           summary: "Get paid prize leaderboard",
           responses: {
             200: { description: "Prize leaderboard" },
+          },
+        },
+      },
+      "/api/v1/admin": {
+        get: {
+          tags: ["API-Football Admin"],
+          summary: "ADMIN only: admin module placeholder",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: "Admin module placeholder" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
           },
         },
       },
