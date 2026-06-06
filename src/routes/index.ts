@@ -7,6 +7,7 @@ import predictionsRouter from '../modules/predictions';
 import leaderboardRouter from '../modules/leaderboard';
 import paymentsRouter from '../modules/payments';
 import adminRouter from '../modules/admin';
+import apiFootballRoutes from '../modules/api-football';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use('/predictions', predictionsRouter);
 router.use('/leaderboard', leaderboardRouter);
 router.use('/payments', paymentsRouter);
 router.use('/admin', adminRouter);
+router.use('/api-football', apiFootballRoutes);
 
 export default router;

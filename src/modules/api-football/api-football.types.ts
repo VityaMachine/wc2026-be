@@ -45,5 +45,13 @@ export interface ApiFootballFixture {
 }
 
 export interface ApiFootballResponse<T> {
+  get?: string;
+  parameters?: Record<string, string | number>;
+  errors?: Record<string, string> | string[];
+  results?: number;
+  paging?: {
+    current: number;
+    total: number;
+  };
   response: T[];
 }

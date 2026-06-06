@@ -7,19 +7,18 @@ import type {
 } from "./api-football.types";
 
 export class ApiFootballClient {
-  private readonly baseUrl: string;
-  private readonly apiKey: string;
+  private config?: ApiFootballConfig;
 
-  constructor(config: ApiFootballConfig = getApiFootballConfig()) {
-    this.baseUrl = config.baseUrl;
-    this.apiKey = config.apiKey;
+  constructor(config?: ApiFootballConfig) {
+    this.config = config;
   }
 
   private async request<T>(
     path: string,
     query?: Record<string, string | number | undefined>,
   ): Promise<ApiFootballResponse<T>> {
-    const url = new URL(path, this.baseUrl);
+    const config = this.getConfig();
+    const url = new URL(path, config.baseUrl);
 
     for (const [key, value] of Object.entries(query ?? {})) {
       if (value !== undefined) {
@@ -29,7 +28,7 @@ export class ApiFootballClient {
 
     const response = await fetch(url, {
       headers: {
-        "x-apisports-key": this.apiKey,
+        "x-apisports-key": config.apiKey,
       },
     });
 
@@ -39,7 +38,37 @@ export class ApiFootballClient {
       );
     }
 
-    return response.json();
+    const data = (await response.json()) as ApiFootballResponse<T>;
+    const errorMessage = this.getApiFootballErrorMessage(data.errors);
+    if (errorMessage) {
+      throw new Error(`API-Football error: ${errorMessage}`);
+    }
+
+    return data;
+  }
+
+  private getConfig(): ApiFootballConfig {
+    this.config ??= getApiFootballConfig();
+    return this.config;
+  }
+
+  private getApiFootballErrorMessage(
+    errors: ApiFootballResponse<unknown>["errors"],
+  ): string | null {
+    if (!errors) {
+      return null;
+    }
+
+    if (Array.isArray(errors)) {
+      return errors.length > 0
+        ? errors.join("; ") || "Unknown API-Football error"
+        : null;
+    }
+
+    const messages = Object.values(errors);
+    return messages.length > 0
+      ? messages.join("; ") || "Unknown API-Football error"
+      : null;
   }
 
   getWorldCupTeams(
