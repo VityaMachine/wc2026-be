@@ -58,6 +58,10 @@ export class MatchService {
       awayScore,
     );
 
+    if (updatedMatch.status === "FINISHED") {
+      await this.calculateMatchPredictionPoints(matchId);
+    }
+
     return {
       id: updatedMatch.id,
       homeScore: updatedMatch.homeScore,

@@ -125,7 +125,7 @@ model TournamentParticipant {
 model Team {
   id           String     @id @default(cuid())
   name         String
-  externalId   Int?
+  externalId   Int?       @unique
   code         String?
   logoUrl      String?
   groupName    String?

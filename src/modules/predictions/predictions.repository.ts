@@ -18,6 +18,17 @@ export const predictionsRepository = {
     });
   },
 
+  findTournamentParticipant(userId: string, tournamentId: string) {
+    return prisma.tournamentParticipant.findUnique({
+      where: {
+        userId_tournamentId: {
+          userId,
+          tournamentId,
+        },
+      },
+    });
+  },
+
   createPrediction(data: {
     userId: string;
     matchId: string;

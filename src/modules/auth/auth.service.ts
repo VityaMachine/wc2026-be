@@ -5,6 +5,24 @@ import { signAccessToken } from '../../lib/jwt';
 import { env } from '../../config/env';
 import type { RegisterRequest, LoginRequest, AuthUserDto, AuthTokenResponse, RegisterResponse, VerifyEmailResponse } from './auth.types';
 
+const PASSWORD_VALIDATION_MESSAGE =
+  'Password must be at least 8 characters long, contain at least one letter, one digit, one special character, and no spaces';
+
+function validatePassword(password: string): void {
+  const isValid =
+    password.length >= 8 &&
+    /[A-Za-z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^\w\s]/.test(password) &&
+    !/\s/.test(password);
+
+  if (!isValid) {
+    const error = new Error(PASSWORD_VALIDATION_MESSAGE);
+    (error as any).status = 400;
+    throw error;
+  }
+}
+
 export class AuthService {
   async register(req: RegisterRequest): Promise<RegisterResponse> {
     const { email, username, password, firstName, lastName } = req;
@@ -15,6 +33,8 @@ export class AuthService {
       (error as any).status = 400;
       throw error;
     }
+
+    validatePassword(password);
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({

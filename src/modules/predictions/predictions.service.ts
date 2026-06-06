@@ -45,6 +45,24 @@ export const predictionsService = {
       throw { status: 404, message: "Match not found" };
     }
 
+    if (match.status !== "SCHEDULED" || new Date() >= match.startsAt) {
+      throw {
+        status: 400,
+        message: "Predictions are closed for this match",
+      };
+    }
+
+    const participant = await predictionsRepository.findTournamentParticipant(
+      userId,
+      match.tournamentId,
+    );
+    if (!participant) {
+      throw {
+        status: 403,
+        message: "You must join the tournament before making predictions",
+      };
+    }
+
     const existingPrediction = await predictionsRepository.findByUserAndMatch(
       userId,
       request.matchId,
