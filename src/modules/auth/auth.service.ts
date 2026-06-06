@@ -157,7 +157,7 @@ export class AuthService {
 
     // Check if email is verified
     if (!user.isEmailVerified) {
-      const error = new Error('Email not verified. Please check your email for verification link.');
+      const error = new Error('Please verify your email before logging in');
       (error as any).status = 403;
       throw error;
     }

@@ -6,3 +6,7 @@ export interface LeaderboardEntry {
   predictionsCount: number;
   calculatedPredictionsCount: number;
 }
+
+export interface PrizeLeaderboardEntry extends LeaderboardEntry {
+  participationType: "PAID";
+}

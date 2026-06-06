@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { tournamentsService } from "./tournaments.service";
-import { JoinTournamentRequest } from "./tournaments.types";
+import {
+  JoinTournamentRequest,
+  UpdateParticipantPaymentRequest,
+} from "./tournaments.types";
 
 class TournamentsController {
   async list(_req: Request, res: Response, next: NextFunction) {
@@ -38,6 +41,50 @@ class TournamentsController {
       );
 
       res.status(201).json(participant);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getParticipation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { slug } = req.params;
+      const participation = await tournamentsService.getParticipation(
+        userId,
+        slug,
+      );
+
+      res.json(participation);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateParticipantPayment(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { slug } = req.params;
+      const request = req.body as UpdateParticipantPaymentRequest;
+      const participant = await tournamentsService.updateParticipantPayment(
+        userId,
+        slug,
+        request,
+      );
+
+      res.json(participant);
     } catch (err) {
       next(err);
     }

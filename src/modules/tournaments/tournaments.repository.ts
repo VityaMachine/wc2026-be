@@ -31,6 +31,25 @@ export const tournamentsRepository = {
     });
   },
 
+  async findUserById(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+      },
+    });
+  },
+
+  async findUserByEmail(email: string) {
+    return prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+      },
+    });
+  },
+
   async findParticipant(userId: string, tournamentId: string) {
     return prisma.tournamentParticipant.findUnique({
       where: {
@@ -52,6 +71,22 @@ export const tournamentsRepository = {
         userId: data.userId,
         tournamentId: data.tournamentId,
         type: data.participationType,
+      },
+    });
+  },
+
+  async updateParticipantPayment(data: {
+    participantId: string;
+    paymentStatus: "UNPAID" | "PENDING" | "PAID" | "FAILED" | "EXPIRED";
+    prizeEligible: boolean;
+    paidAt: Date | null;
+  }) {
+    return prisma.tournamentParticipant.update({
+      where: { id: data.participantId },
+      data: {
+        paymentStatus: data.paymentStatus,
+        prizeEligible: data.prizeEligible,
+        paidAt: data.paidAt,
       },
     });
   },

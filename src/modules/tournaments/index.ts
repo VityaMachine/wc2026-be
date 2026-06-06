@@ -10,6 +10,16 @@ router.post(
   authMiddleware,
   asyncHandler(tournamentsController.joinTournament),
 );
+router.get(
+  "/:slug/participation",
+  authMiddleware,
+  asyncHandler(tournamentsController.getParticipation),
+);
+router.patch(
+  "/:slug/participant/payment",
+  authMiddleware,
+  asyncHandler(tournamentsController.updateParticipantPayment),
+);
 router.get("/:slug", asyncHandler(tournamentsController.getBySlug));
 router.get("/", asyncHandler(tournamentsController.list));
 

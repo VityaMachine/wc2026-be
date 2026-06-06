@@ -1,10 +1,25 @@
 import { leaderboardRepository } from "./leaderboard.repository";
-import { LeaderboardEntry } from "./leaderboard.types";
+import {
+  LeaderboardEntry,
+  PrizeLeaderboardEntry,
+} from "./leaderboard.types";
 
 export class LeaderboardService {
   async getLeaderboard(): Promise<LeaderboardEntry[]> {
     const entries = await leaderboardRepository.getLeaderboardData();
 
+    return this.sortAndRank(entries);
+  }
+
+  async getPrizeLeaderboard(): Promise<PrizeLeaderboardEntry[]> {
+    const entries = await leaderboardRepository.getPrizeLeaderboardData();
+
+    return this.sortAndRank(entries);
+  }
+
+  private sortAndRank<T extends Omit<LeaderboardEntry, "position">>(
+    entries: T[],
+  ): Array<T & { position: number }> {
     return entries
       .sort((a, b) => {
         if (b.totalPoints !== a.totalPoints) {
