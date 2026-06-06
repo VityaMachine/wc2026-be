@@ -103,6 +103,8 @@ export class TournamentsService {
         goalsAgainst: 0,
         goalDifference: 0,
         points: 0,
+        isQualified: false,
+        qualificationStatus: "ELIMINATED",
       };
 
       entriesByTeamId.set(team.id, entry);
@@ -144,10 +146,12 @@ export class TournamentsService {
         teams: this.rankGroupEntries(groupEntries),
       }));
 
+    const thirdPlaceRanking = this.rankThirdPlaceEntries(groups);
+
     return {
       tournamentId,
-      groups,
-      thirdPlaceRanking: this.rankThirdPlaceEntries(groups),
+      groups: this.applyQualificationStatuses(groups, thirdPlaceRanking),
+      thirdPlaceRanking,
     };
   }
 
@@ -399,7 +403,52 @@ export class TournamentsService {
         ...entry,
         position: index + 1,
         isQualified: index < 8,
+        qualificationStatus: index < 8
+          ? "QUALIFIED_THIRD_PLACE"
+          : "ELIMINATED",
       }));
+  }
+
+  private applyQualificationStatuses(
+    groups: TournamentStandingsGroup[],
+    thirdPlaceRanking: TournamentThirdPlaceEntry[],
+  ): TournamentStandingsGroup[] {
+    const qualifiedThirdPlaceTeamIds = new Set(
+      thirdPlaceRanking
+        .filter((entry) => entry.isQualified)
+        .map((entry) => entry.team.id),
+    );
+
+    return groups.map((group) => ({
+      ...group,
+      teams: group.teams.map((entry) => {
+        if (entry.position === 1 || entry.position === 2) {
+          return {
+            ...entry,
+            isQualified: true,
+            qualificationStatus: "QUALIFIED_DIRECT" as const,
+          };
+        }
+
+        if (entry.position === 3) {
+          const isQualified = qualifiedThirdPlaceTeamIds.has(entry.team.id);
+
+          return {
+            ...entry,
+            isQualified,
+            qualificationStatus: isQualified
+              ? "QUALIFIED_THIRD_PLACE"
+              : "PENDING_THIRD_PLACE",
+          };
+        }
+
+        return {
+          ...entry,
+          isQualified: false,
+          qualificationStatus: "ELIMINATED" as const,
+        };
+      }),
+    }));
   }
 }
 

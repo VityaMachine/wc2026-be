@@ -54,6 +54,12 @@ export interface TournamentStandingTeam {
   logoUrl: string | null;
 }
 
+export type TournamentQualificationStatus =
+  | "QUALIFIED_DIRECT"
+  | "QUALIFIED_THIRD_PLACE"
+  | "PENDING_THIRD_PLACE"
+  | "ELIMINATED";
+
 export interface TournamentStandingEntry {
   position: number;
   team: TournamentStandingTeam;
@@ -65,6 +71,8 @@ export interface TournamentStandingEntry {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
+  isQualified: boolean;
+  qualificationStatus: TournamentQualificationStatus;
 }
 
 export interface TournamentStandingsGroup {
