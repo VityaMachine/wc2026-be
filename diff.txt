@@ -1,699 +1,757 @@
-diff --git a/.env.example b/.env.example
-index 14b0156..813043a 100644
---- a/.env.example
-+++ b/.env.example
-@@ -3,3 +3,5 @@ PORT=3000
- JWT_SECRET="change-me-in-production"
- JWT_EXPIRES_IN="7d"
- APP_URL="http://localhost:3000"
-+API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
-+API_FOOTBALL_API_KEY=your_api_key_here
 diff --git a/diff.txt b/diff.txt
-index 553555f..e69de29 100644
+index 0aef555..e69de29 100644
 --- a/diff.txt
 +++ b/diff.txt
-@@ -1,684 +0,0 @@
+@@ -1,699 +0,0 @@
+-diff --git a/.env.example b/.env.example
+-index 14b0156..813043a 100644
+---- a/.env.example
+-+++ b/.env.example
+-@@ -3,3 +3,5 @@ PORT=3000
+- JWT_SECRET="change-me-in-production"
+- JWT_EXPIRES_IN="7d"
+- APP_URL="http://localhost:3000"
+-+API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
+-+API_FOOTBALL_API_KEY=your_api_key_here
 -diff --git a/diff.txt b/diff.txt
--index d030393..e69de29 100644
+-index 553555f..e69de29 100644
 ---- a/diff.txt
 -+++ b/diff.txt
--@@ -1,658 +0,0 @@
---diff --git a/.gitignore b/.gitignore
---index beb6c9a..742107b 100644
------ a/.gitignore
---+++ b/.gitignore
---@@ -15,4 +15,6 @@ coverage/
--- .prisma/client
--- 
--- .DS_Store
----Thumbs.db
---\ No newline at end of file
---+Thumbs.db
---+
---+diff.txt
---\ No newline at end of file
+-@@ -1,684 +0,0 @@
 --diff --git a/diff.txt b/diff.txt
---index 4154a4b..e69de29 100644
+--index d030393..e69de29 100644
 ----- a/diff.txt
 --+++ b/diff.txt
---@@ -1,109 +0,0 @@
----diff --git a/src/modules/matches/match.controller.ts b/src/modules/matches/match.controller.ts
----index eeeb579..8f807b8 100644
------- a/src/modules/matches/match.controller.ts
----+++ b/src/modules/matches/match.controller.ts
----@@ -55,9 +55,17 @@ class MatchController {
----   }
+--@@ -1,658 +0,0 @@
+---diff --git a/.gitignore b/.gitignore
+---index beb6c9a..742107b 100644
+------ a/.gitignore
+---+++ b/.gitignore
+---@@ -15,4 +15,6 @@ coverage/
+--- .prisma/client
 --- 
----   async getPredictions(req: Request, res: Response, next: NextFunction) {
----+    const userId = req.user?.userId;
----+    if (!userId) {
----+      return res.status(401).json({ message: "Unauthorized" });
+--- .DS_Store
+----Thumbs.db
+---\ No newline at end of file
+---+Thumbs.db
+---+
+---+diff.txt
+---\ No newline at end of file
+---diff --git a/diff.txt b/diff.txt
+---index 4154a4b..e69de29 100644
+------ a/diff.txt
+---+++ b/diff.txt
+---@@ -1,109 +0,0 @@
+----diff --git a/src/modules/matches/match.controller.ts b/src/modules/matches/match.controller.ts
+----index eeeb579..8f807b8 100644
+------- a/src/modules/matches/match.controller.ts
+----+++ b/src/modules/matches/match.controller.ts
+----@@ -55,9 +55,17 @@ class MatchController {
+----   }
+---- 
+----   async getPredictions(req: Request, res: Response, next: NextFunction) {
+----+    const userId = req.user?.userId;
+----+    if (!userId) {
+----+      return res.status(401).json({ message: "Unauthorized" });
+----+    }
+----+
+----     try {
+----       const matchId = req.params.id as string;
+-----      const predictions = await matchService.getMatchPredictions(matchId);
+----+      const predictions = await matchService.getMatchPredictions(
+----+        matchId,
+----+        userId,
+----+      );
+----       res.json(predictions);
+----     } catch (error: unknown) {
+----       const typedError = error as { status?: number; message?: string };
+----diff --git a/src/modules/matches/match.service.ts b/src/modules/matches/match.service.ts
+----index b00a99e..8178307 100644
+------- a/src/modules/matches/match.service.ts
+----+++ b/src/modules/matches/match.service.ts
+----@@ -1,7 +1,7 @@
+---- import { matchRepository } from "./match.repository";
+---- import { predictionsRepository } from "../predictions/predictions.repository";
+---- import { scoringService } from "../scoring/scoring.service";
+-----import { MatchPredictionResponse } from "../predictions/predictions.types";
+----+import { MatchPredictionsVisibilityResponse } from "../predictions/predictions.types";
+---- 
+---- export class MatchService {
+----   async list(tournamentId?: string) {
+----@@ -150,27 +150,45 @@ export class MatchService {
+---- 
+----   async getMatchPredictions(
+----     matchId: string,
+-----  ): Promise<MatchPredictionResponse[]> {
+----+    currentUserId: string,
+----+  ): Promise<MatchPredictionsVisibilityResponse> {
+----     const match = await matchRepository.findById(matchId);
+----     if (!match) {
+----       throw { status: 404, message: "Match not found" };
+----     }
+---- 
+----+    const ownPrediction = await predictionsRepository.findByUserAndMatch(
+----+      currentUserId,
+----+      matchId,
+----+    );
+----+
+----+    if (!ownPrediction) {
+----+      return {
+----+        canViewPredictions: false,
+----+        hasOwnPrediction: false,
+----+        predictions: [],
+----+      };
+----+    }
+----+
+----     const predictions =
+----       await predictionsRepository.findDisplayByMatchId(matchId);
+---- 
+-----    return predictions.map((prediction) => ({
+-----      id: prediction.id,
+-----      matchId: prediction.matchId,
+-----      userId: prediction.userId,
+-----      username: prediction.user.username,
+-----      homeScore: prediction.homeScore,
+-----      awayScore: prediction.awayScore,
+-----      points:
+-----        prediction.points !== null ? Number(prediction.points) : null,
+-----      calculatedAt: prediction.calculatedAt,
+-----      createdAt: prediction.createdAt,
+-----    }));
+----+    return {
+----+      canViewPredictions: true,
+----+      hasOwnPrediction: true,
+----+      predictions: predictions.map((prediction) => ({
+----+        id: prediction.id,
+----+        matchId: prediction.matchId,
+----+        userId: prediction.userId,
+----+        username: prediction.user.username,
+----+        homeScore: prediction.homeScore,
+----+        awayScore: prediction.awayScore,
+----+        points:
+----+          prediction.points !== null ? Number(prediction.points) : null,
+----+        calculatedAt: prediction.calculatedAt,
+----+        createdAt: prediction.createdAt,
+----+      })),
+----+    };
+----   }
+---- }
+---- 
+----diff --git a/src/modules/predictions/predictions.types.ts b/src/modules/predictions/predictions.types.ts
+----index 0c041ed..d86204a 100644
+------- a/src/modules/predictions/predictions.types.ts
+----+++ b/src/modules/predictions/predictions.types.ts
+----@@ -52,3 +52,9 @@ export interface MatchPredictionResponse {
+----   calculatedAt: Date | null;
+----   createdAt: Date;
+---- }
+----+
+----+export interface MatchPredictionsVisibilityResponse {
+----+  canViewPredictions: boolean;
+----+  hasOwnPrediction: boolean;
+----+  predictions: MatchPredictionResponse[];
+----+}
+---diff --git a/src/modules/auth/auth.service.ts b/src/modules/auth/auth.service.ts
+---index 24e486a..deed34a 100644
+------ a/src/modules/auth/auth.service.ts
+---+++ b/src/modules/auth/auth.service.ts
+---@@ -157,7 +157,7 @@ export class AuthService {
+--- 
+---     // Check if email is verified
+---     if (!user.isEmailVerified) {
+----      const error = new Error('Email not verified. Please check your email for verification link.');
+---+      const error = new Error('Please verify your email before logging in');
+---       (error as any).status = 403;
+---       throw error;
+---     }
+---diff --git a/src/modules/leaderboard/leaderboard.controller.ts b/src/modules/leaderboard/leaderboard.controller.ts
+---index 23e6293..a172647 100644
+------ a/src/modules/leaderboard/leaderboard.controller.ts
+---+++ b/src/modules/leaderboard/leaderboard.controller.ts
+---@@ -6,6 +6,11 @@ export class LeaderboardController {
+---     const leaderboard = await leaderboardService.getLeaderboard();
+---     res.json(leaderboard);
+---   }
+---+
+---+  async getPrizeLeaderboard(req: Request, res: Response) {
+---+    const leaderboard = await leaderboardService.getPrizeLeaderboard();
+---+    res.json(leaderboard);
+---+  }
+--- }
+--- 
+--- export const leaderboardController = new LeaderboardController();
+---diff --git a/src/modules/leaderboard/leaderboard.repository.ts b/src/modules/leaderboard/leaderboard.repository.ts
+---index 7ec3061..6b9450c 100644
+------ a/src/modules/leaderboard/leaderboard.repository.ts
+---+++ b/src/modules/leaderboard/leaderboard.repository.ts
+---@@ -51,4 +51,104 @@ export const leaderboardRepository = {
+---       calculatedPredictionsCount: calculatedMap.get(group.userId) ?? 0,
+---     }));
+---   },
+---+
+---+  async getPrizeLeaderboardData() {
+---+    const paidParticipants = await prisma.tournamentParticipant.findMany({
+---+      where: {
+---+        type: "PAID",
+---+        paymentStatus: "PAID",
+---+        prizeEligible: true,
+---+      },
+---+      select: {
+---+        userId: true,
+---+        tournamentId: true,
+---+      },
+---+    });
+---+
+---+    if (paidParticipants.length === 0) {
+---+      return [];
 ---+    }
 ---+
----     try {
----       const matchId = req.params.id as string;
-----      const predictions = await matchService.getMatchPredictions(matchId);
----+      const predictions = await matchService.getMatchPredictions(
----+        matchId,
----+        userId,
----+      );
----       res.json(predictions);
----     } catch (error: unknown) {
----       const typedError = error as { status?: number; message?: string };
----diff --git a/src/modules/matches/match.service.ts b/src/modules/matches/match.service.ts
----index b00a99e..8178307 100644
------- a/src/modules/matches/match.service.ts
----+++ b/src/modules/matches/match.service.ts
----@@ -1,7 +1,7 @@
---- import { matchRepository } from "./match.repository";
---- import { predictionsRepository } from "../predictions/predictions.repository";
---- import { scoringService } from "../scoring/scoring.service";
-----import { MatchPredictionResponse } from "../predictions/predictions.types";
----+import { MatchPredictionsVisibilityResponse } from "../predictions/predictions.types";
+---+    const paidPairSet = new Set(
+---+      paidParticipants.map(
+---+        (participant) => `${participant.userId}:${participant.tournamentId}`,
+---+      ),
+---+    );
+---+    const paidUserIds = [...new Set(paidParticipants.map((p) => p.userId))];
+---+
+---+    const predictions = await prisma.prediction.findMany({
+---+      where: {
+---+        userId: {
+---+          in: paidUserIds,
+---+        },
+---+      },
+---+      select: {
+---+        userId: true,
+---+        points: true,
+---+        match: {
+---+          select: {
+---+            tournamentId: true,
+---+          },
+---+        },
+---+      },
+---+    });
+---+
+---+    const entryMap = new Map<
+---+      string,
+---+      {
+---+        userId: string;
+---+        totalPoints: number;
+---+        predictionsCount: number;
+---+        calculatedPredictionsCount: number;
+---+      }
+---+    >();
+---+
+---+    for (const prediction of predictions) {
+---+      const paidPairKey = `${prediction.userId}:${prediction.match.tournamentId}`;
+---+      if (!paidPairSet.has(paidPairKey)) {
+---+        continue;
+---+      }
+---+
+---+      const entry = entryMap.get(prediction.userId) ?? {
+---+        userId: prediction.userId,
+---+        totalPoints: 0,
+---+        predictionsCount: 0,
+---+        calculatedPredictionsCount: 0,
+---+      };
+---+
+---+      entry.predictionsCount += 1;
+---+
+---+      if (prediction.points !== null) {
+---+        entry.totalPoints += Number(prediction.points);
+---+        entry.calculatedPredictionsCount += 1;
+---+      }
+---+
+---+      entryMap.set(prediction.userId, entry);
+---+    }
+---+
+---+    const entries = [...entryMap.values()];
+---+    const userIds = entries.map((entry) => entry.userId);
+---+    const users = await prisma.user.findMany({
+---+      where: {
+---+        id: {
+---+          in: userIds,
+---+        },
+---+      },
+---+      select: {
+---+        id: true,
+---+        username: true,
+---+      },
+---+    });
+---+
+---+    const userMap = new Map(users.map((user) => [user.id, user.username]));
+---+
+---+    return entries.map((entry) => ({
+---+      userId: entry.userId,
+---+      username: userMap.get(entry.userId) ?? "",
+---+      totalPoints: entry.totalPoints,
+---+      predictionsCount: entry.predictionsCount,
+---+      calculatedPredictionsCount: entry.calculatedPredictionsCount,
+---+      participationType: "PAID" as const,
+---+    }));
+---+  },
+--- };
+---diff --git a/src/modules/leaderboard/leaderboard.routes.ts b/src/modules/leaderboard/leaderboard.routes.ts
+---index 7b76c38..d8c0b2c 100644
+------ a/src/modules/leaderboard/leaderboard.routes.ts
+---+++ b/src/modules/leaderboard/leaderboard.routes.ts
+---@@ -4,6 +4,7 @@ import { leaderboardController } from "./leaderboard.controller";
 --- 
---- export class MatchService {
----   async list(tournamentId?: string) {
----@@ -150,27 +150,45 @@ export class MatchService {
+--- const router = Router();
 --- 
----   async getMatchPredictions(
----     matchId: string,
-----  ): Promise<MatchPredictionResponse[]> {
----+    currentUserId: string,
----+  ): Promise<MatchPredictionsVisibilityResponse> {
----     const match = await matchRepository.findById(matchId);
----     if (!match) {
----       throw { status: 404, message: "Match not found" };
+---+router.get("/prize", asyncHandler(leaderboardController.getPrizeLeaderboard));
+--- router.get("/", asyncHandler(leaderboardController.getLeaderboard));
+--- 
+--- export default router;
+---diff --git a/src/modules/leaderboard/leaderboard.service.ts b/src/modules/leaderboard/leaderboard.service.ts
+---index c09500f..da2daad 100644
+------ a/src/modules/leaderboard/leaderboard.service.ts
+---+++ b/src/modules/leaderboard/leaderboard.service.ts
+---@@ -1,10 +1,25 @@
+--- import { leaderboardRepository } from "./leaderboard.repository";
+----import { LeaderboardEntry } from "./leaderboard.types";
+---+import {
+---+  LeaderboardEntry,
+---+  PrizeLeaderboardEntry,
+---+} from "./leaderboard.types";
+--- 
+--- export class LeaderboardService {
+---   async getLeaderboard(): Promise<LeaderboardEntry[]> {
+---     const entries = await leaderboardRepository.getLeaderboardData();
+--- 
+---+    return this.sortAndRank(entries);
+---+  }
+---+
+---+  async getPrizeLeaderboard(): Promise<PrizeLeaderboardEntry[]> {
+---+    const entries = await leaderboardRepository.getPrizeLeaderboardData();
+---+
+---+    return this.sortAndRank(entries);
+---+  }
+---+
+---+  private sortAndRank<T extends Omit<LeaderboardEntry, "position">>(
+---+    entries: T[],
+---+  ): Array<T & { position: number }> {
+---     return entries
+---       .sort((a, b) => {
+---         if (b.totalPoints !== a.totalPoints) {
+---diff --git a/src/modules/leaderboard/leaderboard.types.ts b/src/modules/leaderboard/leaderboard.types.ts
+---index 62454b4..1174d48 100644
+------ a/src/modules/leaderboard/leaderboard.types.ts
+---+++ b/src/modules/leaderboard/leaderboard.types.ts
+---@@ -6,3 +6,7 @@ export interface LeaderboardEntry {
+---   predictionsCount: number;
+---   calculatedPredictionsCount: number;
+--- }
+---+
+---+export interface PrizeLeaderboardEntry extends LeaderboardEntry {
+---+  participationType: "PAID";
+---+}
+---diff --git a/src/modules/tournaments/index.ts b/src/modules/tournaments/index.ts
+---index f5b13fb..1bda219 100644
+------ a/src/modules/tournaments/index.ts
+---+++ b/src/modules/tournaments/index.ts
+---@@ -10,6 +10,16 @@ router.post(
+---   authMiddleware,
+---   asyncHandler(tournamentsController.joinTournament),
+--- );
+---+router.get(
+---+  "/:slug/participation",
+---+  authMiddleware,
+---+  asyncHandler(tournamentsController.getParticipation),
+---+);
+---+router.patch(
+---+  "/:slug/participant/payment",
+---+  authMiddleware,
+---+  asyncHandler(tournamentsController.updateParticipantPayment),
+---+);
+--- router.get("/:slug", asyncHandler(tournamentsController.getBySlug));
+--- router.get("/", asyncHandler(tournamentsController.list));
+--- 
+---diff --git a/src/modules/tournaments/tournaments.controller.ts b/src/modules/tournaments/tournaments.controller.ts
+---index 2cd3cb2..2a0f3ef 100644
+------ a/src/modules/tournaments/tournaments.controller.ts
+---+++ b/src/modules/tournaments/tournaments.controller.ts
+---@@ -1,6 +1,9 @@
+--- import { Request, Response, NextFunction } from "express";
+--- import { tournamentsService } from "./tournaments.service";
+----import { JoinTournamentRequest } from "./tournaments.types";
+---+import {
+---+  JoinTournamentRequest,
+---+  UpdateParticipantPaymentRequest,
+---+} from "./tournaments.types";
+--- 
+--- class TournamentsController {
+---   async list(_req: Request, res: Response, next: NextFunction) {
+---@@ -42,6 +45,50 @@ class TournamentsController {
+---       next(err);
 ---     }
+---   }
+---+
+---+  async getParticipation(req: Request, res: Response, next: NextFunction) {
+---+    try {
+---+      const userId = req.user?.userId;
+---+      if (!userId) {
+---+        return res.status(401).json({ message: "Unauthorized" });
+---+      }
+---+
+---+      const { slug } = req.params;
+---+      const participation = await tournamentsService.getParticipation(
+---+        userId,
+---+        slug,
+---+      );
+---+
+---+      res.json(participation);
+---+    } catch (err) {
+---+      next(err);
+---+    }
+---+  }
+---+
+---+  async updateParticipantPayment(
+---+    req: Request,
+---+    res: Response,
+---+    next: NextFunction,
+---+  ) {
+---+    try {
+---+      const userId = req.user?.userId;
+---+      if (!userId) {
+---+        return res.status(401).json({ message: "Unauthorized" });
+---+      }
+---+
+---+      const { slug } = req.params;
+---+      const request = req.body as UpdateParticipantPaymentRequest;
+---+      const participant = await tournamentsService.updateParticipantPayment(
+---+        userId,
+---+        slug,
+---+        request,
+---+      );
+---+
+---+      res.json(participant);
+---+    } catch (err) {
+---+      next(err);
+---+    }
+---+  }
+--- }
 --- 
----+    const ownPrediction = await predictionsRepository.findByUserAndMatch(
----+      currentUserId,
----+      matchId,
+--- export const tournamentsController = new TournamentsController();
+---diff --git a/src/modules/tournaments/tournaments.repository.ts b/src/modules/tournaments/tournaments.repository.ts
+---index f01750d..f98a4c3 100644
+------ a/src/modules/tournaments/tournaments.repository.ts
+---+++ b/src/modules/tournaments/tournaments.repository.ts
+---@@ -31,6 +31,25 @@ export const tournamentsRepository = {
+---     });
+---   },
+--- 
+---+  async findUserById(userId: string) {
+---+    return prisma.user.findUnique({
+---+      where: { id: userId },
+---+      select: {
+---+        id: true,
+---+        role: true,
+---+      },
+---+    });
+---+  },
+---+
+---+  async findUserByEmail(email: string) {
+---+    return prisma.user.findUnique({
+---+      where: { email },
+---+      select: {
+---+        id: true,
+---+      },
+---+    });
+---+  },
+---+
+---   async findParticipant(userId: string, tournamentId: string) {
+---     return prisma.tournamentParticipant.findUnique({
+---       where: {
+---@@ -55,4 +74,20 @@ export const tournamentsRepository = {
+---       },
+---     });
+---   },
+---+
+---+  async updateParticipantPayment(data: {
+---+    participantId: string;
+---+    paymentStatus: "UNPAID" | "PENDING" | "PAID" | "FAILED" | "EXPIRED";
+---+    prizeEligible: boolean;
+---+    paidAt: Date | null;
+---+  }) {
+---+    return prisma.tournamentParticipant.update({
+---+      where: { id: data.participantId },
+---+      data: {
+---+        paymentStatus: data.paymentStatus,
+---+        prizeEligible: data.prizeEligible,
+---+        paidAt: data.paidAt,
+---+      },
+---+    });
+---+  },
+--- };
+---diff --git a/src/modules/tournaments/tournaments.service.ts b/src/modules/tournaments/tournaments.service.ts
+---index 715db9b..8f0d0dc 100644
+------ a/src/modules/tournaments/tournaments.service.ts
+---+++ b/src/modules/tournaments/tournaments.service.ts
+---@@ -1,9 +1,29 @@
+--- import { tournamentsRepository } from "./tournaments.repository";
+--- import {
+---   JoinTournamentRequest,
+---+  PaymentStatus,
+---+  TournamentParticipationResponse,
+---   TournamentParticipantResponse,
+---+  UpdateParticipantPaymentRequest,
+---+  UpdateParticipantPaymentResponse,
+--- } from "./tournaments.types";
+--- 
+---+const PAYMENT_STATUSES: PaymentStatus[] = [
+---+  "UNPAID",
+---+  "PENDING",
+---+  "PAID",
+---+  "FAILED",
+---+  "EXPIRED",
+---+];
+---+
+---+const PAYMENT_STATUS_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
+---+  UNPAID: ["PENDING", "PAID", "FAILED"],
+---+  PENDING: ["PAID", "FAILED", "EXPIRED"],
+---+  PAID: [],
+---+  FAILED: ["PENDING", "PAID"],
+---+  EXPIRED: ["PENDING", "PAID"],
+---+};
+---+
+--- export class TournamentsService {
+---   async list() {
+---     const tournaments = await tournamentsRepository.findAll();
+---@@ -80,6 +100,113 @@ export class TournamentsService {
+---       updatedAt: participant.updatedAt.toISOString(),
+---     };
+---   }
+---+
+---+  async getParticipation(
+---+    userId: string,
+---+    slug: string,
+---+  ): Promise<TournamentParticipationResponse> {
+---+    const tournament = await tournamentsRepository.findBySlug(slug);
+---+    if (!tournament) {
+---+      throw { status: 404, message: "Tournament not found" };
+---+    }
+---+
+---+    const participant = await tournamentsRepository.findParticipant(
+---+      userId,
+---+      tournament.id,
 ---+    );
 ---+
----+    if (!ownPrediction) {
----+      return {
----+        canViewPredictions: false,
----+        hasOwnPrediction: false,
----+        predictions: [],
+---+    if (!participant) {
+---+      return { joined: false };
+---+    }
+---+
+---+    return {
+---+      joined: true,
+---+      id: participant.id,
+---+      userId: participant.userId,
+---+      tournamentId: participant.tournamentId,
+---+      participationType: participant.type,
+---+      paymentStatus: participant.paymentStatus,
+---+      paidAt: participant.paidAt?.toISOString() ?? null,
+---+      prizeEligible: participant.prizeEligible,
+---+      joinedAt: participant.joinedAt.toISOString(),
+---+      updatedAt: participant.updatedAt.toISOString(),
+---+    };
+---+  }
+---+
+---+  async updateParticipantPayment(
+---+    adminUserId: string,
+---+    slug: string,
+---+    request: UpdateParticipantPaymentRequest,
+---+  ): Promise<UpdateParticipantPaymentResponse> {
+---+    const adminUser = await tournamentsRepository.findUserById(adminUserId);
+---+    if (adminUser?.role !== "ADMIN") {
+---+      throw { status: 403, message: "Forbidden" };
+---+    }
+---+
+---+    const email = request.email?.trim();
+---+    if (!email) {
+---+      throw { status: 400, message: "email is required" };
+---+    }
+---+
+---+    const paymentStatus = request.paymentStatus;
+---+    if (!PAYMENT_STATUSES.includes(paymentStatus)) {
+---+      throw {
+---+        status: 400,
+---+        message: "paymentStatus must be UNPAID, PENDING, PAID, FAILED, or EXPIRED",
 ---+      };
 ---+    }
 ---+
----     const predictions =
----       await predictionsRepository.findDisplayByMatchId(matchId);
---- 
-----    return predictions.map((prediction) => ({
-----      id: prediction.id,
-----      matchId: prediction.matchId,
-----      userId: prediction.userId,
-----      username: prediction.user.username,
-----      homeScore: prediction.homeScore,
-----      awayScore: prediction.awayScore,
-----      points:
-----        prediction.points !== null ? Number(prediction.points) : null,
-----      calculatedAt: prediction.calculatedAt,
-----      createdAt: prediction.createdAt,
-----    }));
+---+    const tournament = await tournamentsRepository.findBySlug(slug);
+---+    if (!tournament) {
+---+      throw { status: 404, message: "Tournament not found" };
+---+    }
+---+
+---+    const user = await tournamentsRepository.findUserByEmail(email);
+---+    if (!user) {
+---+      throw { status: 404, message: "User not found" };
+---+    }
+---+
+---+    const participant = await tournamentsRepository.findParticipant(
+---+      user.id,
+---+      tournament.id,
+---+    );
+---+
+---+    if (!participant) {
+---+      throw { status: 404, message: "Tournament participant not found" };
+---+    }
+---+
+---+    const currentPaymentStatus = participant.paymentStatus;
+---+    const isSameStatus = currentPaymentStatus === paymentStatus;
+---+    const isAllowedTransition =
+---+      PAYMENT_STATUS_TRANSITIONS[currentPaymentStatus].includes(paymentStatus);
+---+
+---+    if (!isSameStatus && !isAllowedTransition) {
+---+      throw { status: 400, message: "Invalid payment status transition" };
+---+    }
+---+
+---+    const prizeEligible =
+---+      participant.type === "PAID" && paymentStatus === "PAID";
+---+
+---+    const updatedParticipant =
+---+      await tournamentsRepository.updateParticipantPayment({
+---+        participantId: participant.id,
+---+        paymentStatus,
+---+        prizeEligible,
+---+        paidAt: prizeEligible ? new Date() : null,
+---+      });
+---+
 ---+    return {
----+      canViewPredictions: true,
----+      hasOwnPrediction: true,
----+      predictions: predictions.map((prediction) => ({
----+        id: prediction.id,
----+        matchId: prediction.matchId,
----+        userId: prediction.userId,
----+        username: prediction.user.username,
----+        homeScore: prediction.homeScore,
----+        awayScore: prediction.awayScore,
----+        points:
----+          prediction.points !== null ? Number(prediction.points) : null,
----+        calculatedAt: prediction.calculatedAt,
----+        createdAt: prediction.createdAt,
----+      })),
+---+      id: updatedParticipant.id,
+---+      userId: updatedParticipant.userId,
+---+      tournamentId: updatedParticipant.tournamentId,
+---+      participationType: updatedParticipant.type,
+---+      paymentStatus: updatedParticipant.paymentStatus,
+---+      paidAt: updatedParticipant.paidAt?.toISOString() ?? null,
+---+      prizeEligible: updatedParticipant.prizeEligible,
+---+      joinedAt: updatedParticipant.joinedAt.toISOString(),
+---+      updatedAt: updatedParticipant.updatedAt.toISOString(),
 ---+    };
----   }
+---+  }
 --- }
 --- 
----diff --git a/src/modules/predictions/predictions.types.ts b/src/modules/predictions/predictions.types.ts
----index 0c041ed..d86204a 100644
------- a/src/modules/predictions/predictions.types.ts
----+++ b/src/modules/predictions/predictions.types.ts
----@@ -52,3 +52,9 @@ export interface MatchPredictionResponse {
----   calculatedAt: Date | null;
----   createdAt: Date;
+--- export const tournamentsService = new TournamentsService();
+---diff --git a/src/modules/tournaments/tournaments.types.ts b/src/modules/tournaments/tournaments.types.ts
+---index b4f1f89..5463241 100644
+------ a/src/modules/tournaments/tournaments.types.ts
+---+++ b/src/modules/tournaments/tournaments.types.ts
+---@@ -1,9 +1,15 @@
+--- export type ParticipationType = "FREE" | "PAID";
+---+export type PaymentStatus = "UNPAID" | "PENDING" | "PAID" | "FAILED" | "EXPIRED";
+--- 
+--- export interface JoinTournamentRequest {
+---   participationType: ParticipationType;
+--- }
+--- 
+---+export interface UpdateParticipantPaymentRequest {
+---+  email: string;
+---+  paymentStatus: PaymentStatus;
+---+}
+---+
+--- export interface TournamentParticipantResponse {
+---   id: string;
+---   userId: string;
+---@@ -12,3 +18,30 @@ export interface TournamentParticipantResponse {
+---   joinedAt: string;
+---   updatedAt: string;
 --- }
 ---+
----+export interface MatchPredictionsVisibilityResponse {
----+  canViewPredictions: boolean;
----+  hasOwnPrediction: boolean;
----+  predictions: MatchPredictionResponse[];
+---+export type TournamentParticipationResponse =
+---+  | { joined: false }
+---+  | {
+---+      joined: true;
+---+      id: string;
+---+      userId: string;
+---+      tournamentId: string;
+---+      participationType: ParticipationType;
+---+      paymentStatus: PaymentStatus;
+---+      paidAt: string | null;
+---+      prizeEligible: boolean;
+---+      joinedAt: string;
+---+      updatedAt: string;
+---+    };
+---+
+---+export interface UpdateParticipantPaymentResponse {
+---+  id: string;
+---+  userId: string;
+---+  tournamentId: string;
+---+  participationType: ParticipationType;
+---+  paymentStatus: PaymentStatus;
+---+  paidAt: string | null;
+---+  prizeEligible: boolean;
+---+  joinedAt: string;
+---+  updatedAt: string;
 ---+}
---diff --git a/src/modules/auth/auth.service.ts b/src/modules/auth/auth.service.ts
---index 24e486a..deed34a 100644
------ a/src/modules/auth/auth.service.ts
---+++ b/src/modules/auth/auth.service.ts
---@@ -157,7 +157,7 @@ export class AuthService {
--- 
---     // Check if email is verified
---     if (!user.isEmailVerified) {
----      const error = new Error('Email not verified. Please check your email for verification link.');
---+      const error = new Error('Please verify your email before logging in');
---       (error as any).status = 403;
---       throw error;
---     }
---diff --git a/src/modules/leaderboard/leaderboard.controller.ts b/src/modules/leaderboard/leaderboard.controller.ts
---index 23e6293..a172647 100644
------ a/src/modules/leaderboard/leaderboard.controller.ts
---+++ b/src/modules/leaderboard/leaderboard.controller.ts
---@@ -6,6 +6,11 @@ export class LeaderboardController {
---     const leaderboard = await leaderboardService.getLeaderboard();
---     res.json(leaderboard);
---   }
---+
---+  async getPrizeLeaderboard(req: Request, res: Response) {
---+    const leaderboard = await leaderboardService.getPrizeLeaderboard();
---+    res.json(leaderboard);
---+  }
--- }
--- 
--- export const leaderboardController = new LeaderboardController();
---diff --git a/src/modules/leaderboard/leaderboard.repository.ts b/src/modules/leaderboard/leaderboard.repository.ts
---index 7ec3061..6b9450c 100644
------ a/src/modules/leaderboard/leaderboard.repository.ts
---+++ b/src/modules/leaderboard/leaderboard.repository.ts
---@@ -51,4 +51,104 @@ export const leaderboardRepository = {
---       calculatedPredictionsCount: calculatedMap.get(group.userId) ?? 0,
---     }));
---   },
---+
---+  async getPrizeLeaderboardData() {
---+    const paidParticipants = await prisma.tournamentParticipant.findMany({
---+      where: {
---+        type: "PAID",
---+        paymentStatus: "PAID",
---+        prizeEligible: true,
---+      },
---+      select: {
---+        userId: true,
---+        tournamentId: true,
---+      },
---+    });
---+
---+    if (paidParticipants.length === 0) {
---+      return [];
---+    }
---+
---+    const paidPairSet = new Set(
---+      paidParticipants.map(
---+        (participant) => `${participant.userId}:${participant.tournamentId}`,
---+      ),
---+    );
---+    const paidUserIds = [...new Set(paidParticipants.map((p) => p.userId))];
---+
---+    const predictions = await prisma.prediction.findMany({
---+      where: {
---+        userId: {
---+          in: paidUserIds,
---+        },
---+      },
---+      select: {
---+        userId: true,
---+        points: true,
---+        match: {
---+          select: {
---+            tournamentId: true,
---+          },
---+        },
---+      },
---+    });
---+
---+    const entryMap = new Map<
---+      string,
---+      {
---+        userId: string;
---+        totalPoints: number;
---+        predictionsCount: number;
---+        calculatedPredictionsCount: number;
---+      }
---+    >();
---+
---+    for (const prediction of predictions) {
---+      const paidPairKey = `${prediction.userId}:${prediction.match.tournamentId}`;
---+      if (!paidPairSet.has(paidPairKey)) {
---+        continue;
---+      }
---+
---+      const entry = entryMap.get(prediction.userId) ?? {
---+        userId: prediction.userId,
---+        totalPoints: 0,
---+        predictionsCount: 0,
---+        calculatedPredictionsCount: 0,
---+      };
---+
---+      entry.predictionsCount += 1;
---+
---+      if (prediction.points !== null) {
---+        entry.totalPoints += Number(prediction.points);
---+        entry.calculatedPredictionsCount += 1;
---+      }
---+
---+      entryMap.set(prediction.userId, entry);
---+    }
---+
---+    const entries = [...entryMap.values()];
---+    const userIds = entries.map((entry) => entry.userId);
---+    const users = await prisma.user.findMany({
---+      where: {
---+        id: {
---+          in: userIds,
---+        },
---+      },
---+      select: {
---+        id: true,
---+        username: true,
---+      },
---+    });
---+
---+    const userMap = new Map(users.map((user) => [user.id, user.username]));
---+
---+    return entries.map((entry) => ({
---+      userId: entry.userId,
---+      username: userMap.get(entry.userId) ?? "",
---+      totalPoints: entry.totalPoints,
---+      predictionsCount: entry.predictionsCount,
---+      calculatedPredictionsCount: entry.calculatedPredictionsCount,
---+      participationType: "PAID" as const,
---+    }));
---+  },
--- };
---diff --git a/src/modules/leaderboard/leaderboard.routes.ts b/src/modules/leaderboard/leaderboard.routes.ts
---index 7b76c38..d8c0b2c 100644
------ a/src/modules/leaderboard/leaderboard.routes.ts
---+++ b/src/modules/leaderboard/leaderboard.routes.ts
---@@ -4,6 +4,7 @@ import { leaderboardController } from "./leaderboard.controller";
--- 
--- const router = Router();
--- 
---+router.get("/prize", asyncHandler(leaderboardController.getPrizeLeaderboard));
--- router.get("/", asyncHandler(leaderboardController.getLeaderboard));
--- 
--- export default router;
---diff --git a/src/modules/leaderboard/leaderboard.service.ts b/src/modules/leaderboard/leaderboard.service.ts
---index c09500f..da2daad 100644
------ a/src/modules/leaderboard/leaderboard.service.ts
---+++ b/src/modules/leaderboard/leaderboard.service.ts
---@@ -1,10 +1,25 @@
--- import { leaderboardRepository } from "./leaderboard.repository";
----import { LeaderboardEntry } from "./leaderboard.types";
---+import {
---+  LeaderboardEntry,
---+  PrizeLeaderboardEntry,
---+} from "./leaderboard.types";
--- 
--- export class LeaderboardService {
---   async getLeaderboard(): Promise<LeaderboardEntry[]> {
---     const entries = await leaderboardRepository.getLeaderboardData();
--- 
---+    return this.sortAndRank(entries);
---+  }
---+
---+  async getPrizeLeaderboard(): Promise<PrizeLeaderboardEntry[]> {
---+    const entries = await leaderboardRepository.getPrizeLeaderboardData();
---+
---+    return this.sortAndRank(entries);
---+  }
---+
---+  private sortAndRank<T extends Omit<LeaderboardEntry, "position">>(
---+    entries: T[],
---+  ): Array<T & { position: number }> {
---     return entries
---       .sort((a, b) => {
---         if (b.totalPoints !== a.totalPoints) {
---diff --git a/src/modules/leaderboard/leaderboard.types.ts b/src/modules/leaderboard/leaderboard.types.ts
---index 62454b4..1174d48 100644
------ a/src/modules/leaderboard/leaderboard.types.ts
---+++ b/src/modules/leaderboard/leaderboard.types.ts
---@@ -6,3 +6,7 @@ export interface LeaderboardEntry {
---   predictionsCount: number;
---   calculatedPredictionsCount: number;
--- }
---+
---+export interface PrizeLeaderboardEntry extends LeaderboardEntry {
---+  participationType: "PAID";
---+}
---diff --git a/src/modules/tournaments/index.ts b/src/modules/tournaments/index.ts
---index f5b13fb..1bda219 100644
------ a/src/modules/tournaments/index.ts
---+++ b/src/modules/tournaments/index.ts
---@@ -10,6 +10,16 @@ router.post(
---   authMiddleware,
---   asyncHandler(tournamentsController.joinTournament),
--- );
---+router.get(
---+  "/:slug/participation",
---+  authMiddleware,
---+  asyncHandler(tournamentsController.getParticipation),
---+);
---+router.patch(
---+  "/:slug/participant/payment",
---+  authMiddleware,
---+  asyncHandler(tournamentsController.updateParticipantPayment),
---+);
--- router.get("/:slug", asyncHandler(tournamentsController.getBySlug));
--- router.get("/", asyncHandler(tournamentsController.list));
--- 
---diff --git a/src/modules/tournaments/tournaments.controller.ts b/src/modules/tournaments/tournaments.controller.ts
---index 2cd3cb2..2a0f3ef 100644
------ a/src/modules/tournaments/tournaments.controller.ts
---+++ b/src/modules/tournaments/tournaments.controller.ts
---@@ -1,6 +1,9 @@
--- import { Request, Response, NextFunction } from "express";
--- import { tournamentsService } from "./tournaments.service";
----import { JoinTournamentRequest } from "./tournaments.types";
---+import {
---+  JoinTournamentRequest,
---+  UpdateParticipantPaymentRequest,
---+} from "./tournaments.types";
--- 
--- class TournamentsController {
---   async list(_req: Request, res: Response, next: NextFunction) {
---@@ -42,6 +45,50 @@ class TournamentsController {
---       next(err);
---     }
---   }
---+
---+  async getParticipation(req: Request, res: Response, next: NextFunction) {
---+    try {
---+      const userId = req.user?.userId;
---+      if (!userId) {
---+        return res.status(401).json({ message: "Unauthorized" });
---+      }
---+
---+      const { slug } = req.params;
---+      const participation = await tournamentsService.getParticipation(
---+        userId,
---+        slug,
---+      );
---+
---+      res.json(participation);
---+    } catch (err) {
---+      next(err);
---+    }
---+  }
---+
---+  async updateParticipantPayment(
---+    req: Request,
---+    res: Response,
---+    next: NextFunction,
---+  ) {
---+    try {
---+      const userId = req.user?.userId;
---+      if (!userId) {
---+        return res.status(401).json({ message: "Unauthorized" });
---+      }
---+
---+      const { slug } = req.params;
---+      const request = req.body as UpdateParticipantPaymentRequest;
---+      const participant = await tournamentsService.updateParticipantPayment(
---+        userId,
---+        slug,
---+        request,
---+      );
---+
---+      res.json(participant);
---+    } catch (err) {
---+      next(err);
---+    }
---+  }
--- }
--- 
--- export const tournamentsController = new TournamentsController();
---diff --git a/src/modules/tournaments/tournaments.repository.ts b/src/modules/tournaments/tournaments.repository.ts
---index f01750d..f98a4c3 100644
------ a/src/modules/tournaments/tournaments.repository.ts
---+++ b/src/modules/tournaments/tournaments.repository.ts
---@@ -31,6 +31,25 @@ export const tournamentsRepository = {
---     });
---   },
--- 
---+  async findUserById(userId: string) {
---+    return prisma.user.findUnique({
---+      where: { id: userId },
---+      select: {
---+        id: true,
---+        role: true,
---+      },
---+    });
---+  },
---+
---+  async findUserByEmail(email: string) {
---+    return prisma.user.findUnique({
---+      where: { email },
---+      select: {
---+        id: true,
---+      },
---+    });
---+  },
---+
---   async findParticipant(userId: string, tournamentId: string) {
---     return prisma.tournamentParticipant.findUnique({
---       where: {
---@@ -55,4 +74,20 @@ export const tournamentsRepository = {
---       },
---     });
---   },
---+
---+  async updateParticipantPayment(data: {
---+    participantId: string;
---+    paymentStatus: "UNPAID" | "PENDING" | "PAID" | "FAILED" | "EXPIRED";
---+    prizeEligible: boolean;
---+    paidAt: Date | null;
---+  }) {
---+    return prisma.tournamentParticipant.update({
---+      where: { id: data.participantId },
---+      data: {
---+        paymentStatus: data.paymentStatus,
---+        prizeEligible: data.prizeEligible,
---+        paidAt: data.paidAt,
---+      },
---+    });
---+  },
--- };
---diff --git a/src/modules/tournaments/tournaments.service.ts b/src/modules/tournaments/tournaments.service.ts
---index 715db9b..8f0d0dc 100644
------ a/src/modules/tournaments/tournaments.service.ts
---+++ b/src/modules/tournaments/tournaments.service.ts
---@@ -1,9 +1,29 @@
--- import { tournamentsRepository } from "./tournaments.repository";
--- import {
---   JoinTournamentRequest,
---+  PaymentStatus,
---+  TournamentParticipationResponse,
---   TournamentParticipantResponse,
---+  UpdateParticipantPaymentRequest,
---+  UpdateParticipantPaymentResponse,
--- } from "./tournaments.types";
--- 
---+const PAYMENT_STATUSES: PaymentStatus[] = [
---+  "UNPAID",
---+  "PENDING",
---+  "PAID",
---+  "FAILED",
---+  "EXPIRED",
---+];
---+
---+const PAYMENT_STATUS_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
---+  UNPAID: ["PENDING", "PAID", "FAILED"],
---+  PENDING: ["PAID", "FAILED", "EXPIRED"],
---+  PAID: [],
---+  FAILED: ["PENDING", "PAID"],
---+  EXPIRED: ["PENDING", "PAID"],
---+};
---+
--- export class TournamentsService {
---   async list() {
---     const tournaments = await tournamentsRepository.findAll();
---@@ -80,6 +100,113 @@ export class TournamentsService {
---       updatedAt: participant.updatedAt.toISOString(),
---     };
---   }
---+
---+  async getParticipation(
---+    userId: string,
---+    slug: string,
---+  ): Promise<TournamentParticipationResponse> {
---+    const tournament = await tournamentsRepository.findBySlug(slug);
---+    if (!tournament) {
---+      throw { status: 404, message: "Tournament not found" };
---+    }
---+
---+    const participant = await tournamentsRepository.findParticipant(
---+      userId,
---+      tournament.id,
---+    );
---+
---+    if (!participant) {
---+      return { joined: false };
---+    }
---+
---+    return {
---+      joined: true,
---+      id: participant.id,
---+      userId: participant.userId,
---+      tournamentId: participant.tournamentId,
---+      participationType: participant.type,
---+      paymentStatus: participant.paymentStatus,
---+      paidAt: participant.paidAt?.toISOString() ?? null,
---+      prizeEligible: participant.prizeEligible,
---+      joinedAt: participant.joinedAt.toISOString(),
---+      updatedAt: participant.updatedAt.toISOString(),
---+    };
---+  }
---+
---+  async updateParticipantPayment(
---+    adminUserId: string,
---+    slug: string,
---+    request: UpdateParticipantPaymentRequest,
---+  ): Promise<UpdateParticipantPaymentResponse> {
---+    const adminUser = await tournamentsRepository.findUserById(adminUserId);
---+    if (adminUser?.role !== "ADMIN") {
---+      throw { status: 403, message: "Forbidden" };
---+    }
---+
---+    const email = request.email?.trim();
---+    if (!email) {
---+      throw { status: 400, message: "email is required" };
---+    }
---+
---+    const paymentStatus = request.paymentStatus;
---+    if (!PAYMENT_STATUSES.includes(paymentStatus)) {
---+      throw {
---+        status: 400,
---+        message: "paymentStatus must be UNPAID, PENDING, PAID, FAILED, or EXPIRED",
---+      };
---+    }
---+
---+    const tournament = await tournamentsRepository.findBySlug(slug);
---+    if (!tournament) {
---+      throw { status: 404, message: "Tournament not found" };
---+    }
---+
---+    const user = await tournamentsRepository.findUserByEmail(email);
---+    if (!user) {
---+      throw { status: 404, message: "User not found" };
---+    }
---+
---+    const participant = await tournamentsRepository.findParticipant(
---+      user.id,
---+      tournament.id,
---+    );
---+
---+    if (!participant) {
---+      throw { status: 404, message: "Tournament participant not found" };
---+    }
---+
---+    const currentPaymentStatus = participant.paymentStatus;
---+    const isSameStatus = currentPaymentStatus === paymentStatus;
---+    const isAllowedTransition =
---+      PAYMENT_STATUS_TRANSITIONS[currentPaymentStatus].includes(paymentStatus);
---+
---+    if (!isSameStatus && !isAllowedTransition) {
---+      throw { status: 400, message: "Invalid payment status transition" };
---+    }
---+
---+    const prizeEligible =
---+      participant.type === "PAID" && paymentStatus === "PAID";
---+
---+    const updatedParticipant =
---+      await tournamentsRepository.updateParticipantPayment({
---+        participantId: participant.id,
---+        paymentStatus,
---+        prizeEligible,
---+        paidAt: prizeEligible ? new Date() : null,
---+      });
---+
---+    return {
---+      id: updatedParticipant.id,
---+      userId: updatedParticipant.userId,
---+      tournamentId: updatedParticipant.tournamentId,
---+      participationType: updatedParticipant.type,
---+      paymentStatus: updatedParticipant.paymentStatus,
---+      paidAt: updatedParticipant.paidAt?.toISOString() ?? null,
---+      prizeEligible: updatedParticipant.prizeEligible,
---+      joinedAt: updatedParticipant.joinedAt.toISOString(),
---+      updatedAt: updatedParticipant.updatedAt.toISOString(),
---+    };
---+  }
--- }
--- 
--- export const tournamentsService = new TournamentsService();
---diff --git a/src/modules/tournaments/tournaments.types.ts b/src/modules/tournaments/tournaments.types.ts
---index b4f1f89..5463241 100644
------ a/src/modules/tournaments/tournaments.types.ts
---+++ b/src/modules/tournaments/tournaments.types.ts
---@@ -1,9 +1,15 @@
--- export type ParticipationType = "FREE" | "PAID";
---+export type PaymentStatus = "UNPAID" | "PENDING" | "PAID" | "FAILED" | "EXPIRED";
--- 
--- export interface JoinTournamentRequest {
---   participationType: ParticipationType;
--- }
--- 
---+export interface UpdateParticipantPaymentRequest {
---+  email: string;
---+  paymentStatus: PaymentStatus;
---+}
---+
--- export interface TournamentParticipantResponse {
---   id: string;
---   userId: string;
---@@ -12,3 +18,30 @@ export interface TournamentParticipantResponse {
---   joinedAt: string;
---   updatedAt: string;
--- }
---+
---+export type TournamentParticipationResponse =
---+  | { joined: false }
---+  | {
---+      joined: true;
---+      id: string;
---+      userId: string;
---+      tournamentId: string;
---+      participationType: ParticipationType;
---+      paymentStatus: PaymentStatus;
---+      paidAt: string | null;
---+      prizeEligible: boolean;
---+      joinedAt: string;
---+      updatedAt: string;
---+    };
---+
---+export interface UpdateParticipantPaymentResponse {
---+  id: string;
---+  userId: string;
---+  tournamentId: string;
---+  participationType: ParticipationType;
---+  paymentStatus: PaymentStatus;
---+  paidAt: string | null;
---+  prizeEligible: boolean;
---+  joinedAt: string;
---+  updatedAt: string;
---+}
--diff --git a/prisma/schema.prisma b/prisma/schema.prisma
--index b25e040..50c1800 100644
----- a/prisma/schema.prisma
--+++ b/prisma/schema.prisma
--@@ -125,7 +125,7 @@ model TournamentParticipant {
-- model Team {
--   id           String     @id @default(cuid())
--   name         String
---  externalId   Int?
--+  externalId   Int?       @unique
--   code         String?
--   logoUrl      String?
--   groupName    String?
--@@ -149,6 +149,7 @@ model Match {
--   homeTeamId        String?
--   awayTeam          Team?       @relation("AwayTeam", fields: [awayTeamId], references: [id])
--   awayTeamId        String?
--+  externalId        Int?        @unique
--   externalFixtureId Int?
--   startsAt          DateTime
--   status            MatchStatus @default(SCHEDULED)
+--diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+--index b25e040..50c1800 100644
+----- a/prisma/schema.prisma
+--+++ b/prisma/schema.prisma
+--@@ -125,7 +125,7 @@ model TournamentParticipant {
+-- model Team {
+--   id           String     @id @default(cuid())
+--   name         String
+---  externalId   Int?
+--+  externalId   Int?       @unique
+--   code         String?
+--   logoUrl      String?
+--   groupName    String?
+--@@ -149,6 +149,7 @@ model Match {
+--   homeTeamId        String?
+--   awayTeam          Team?       @relation("AwayTeam", fields: [awayTeamId], references: [id])
+--   awayTeamId        String?
+--+  externalId        Int?        @unique
+--   externalFixtureId Int?
+--   startsAt          DateTime
+--   status            MatchStatus @default(SCHEDULED)
+diff --git a/src/modules/api-football/api-football.types.ts b/src/modules/api-football/api-football.types.ts
+index 2b6770c..e8ca933 100644
+--- a/src/modules/api-football/api-football.types.ts
++++ b/src/modules/api-football/api-football.types.ts
+@@ -2,3 +2,48 @@ export interface ApiFootballConfig {
+   baseUrl: string;
+   apiKey: string;
+ }
++
++export interface ApiFootballTeam {
++  team: {
++    id: number;
++    name: string;
++    code: string | null;
++    country: string;
++    logo: string;
++  };
++}
++
++export interface ApiFootballFixture {
++  fixture: {
++    id: number;
++    date: string;
++    status: {
++      short: string;
++      long: string;
++      elapsed: number | null;
++    };
++  };
++  league: {
++    id: number;
++    season: number;
++    round: string;
++  };
++  teams: {
++    home: {
++      id: number;
++      name: string;
++    };
++    away: {
++      id: number;
++      name: string;
++    };
++  };
++  goals: {
++    home: number | null;
++    away: number | null;
++  };
++}
++
++export interface ApiFootballResponse<T> {
++  response: T[];
++}
