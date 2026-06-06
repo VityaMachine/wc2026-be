@@ -20,7 +20,8 @@ router.patch(
   authMiddleware,
   asyncHandler(tournamentsController.updateParticipantPayment),
 );
-router.get("/:slug", asyncHandler(tournamentsController.getBySlug));
 router.get("/", asyncHandler(tournamentsController.list));
+router.get("/:id/standings", asyncHandler(tournamentsController.getStandings));
+router.get("/:slug", asyncHandler(tournamentsController.getBySlug));
 
 export default router;

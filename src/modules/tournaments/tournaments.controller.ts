@@ -25,6 +25,16 @@ class TournamentsController {
     }
   }
 
+  async getStandings(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const standings = await tournamentsService.getStandings(id);
+      res.json(standings);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async joinTournament(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.userId;

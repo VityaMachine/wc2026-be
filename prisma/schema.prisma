@@ -139,6 +139,7 @@ model Team {
   awayMatches Match[] @relation("AwayTeam")
 
   @@unique([externalId, tournamentId])
+  @@index([tournamentId, groupName])
 }
 
 model Match {

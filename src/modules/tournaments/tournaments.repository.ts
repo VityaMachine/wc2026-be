@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma";
+import { MatchStage, MatchStatus } from "@prisma/client";
 
 export const tournamentsRepository = {
   async findAll() {
@@ -27,6 +28,55 @@ export const tournamentsRepository = {
         entryFee: true,
         currency: true,
         isPrizePoolEnabled: true,
+      },
+    });
+  },
+
+  async findById(id: string) {
+    return prisma.tournament.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+  },
+
+  async findTeamsForStandings(tournamentId: string) {
+    return prisma.team.findMany({
+      where: {
+        tournamentId,
+        groupName: {
+          not: null,
+        },
+      },
+      select: {
+        id: true,
+        externalId: true,
+        name: true,
+        code: true,
+        logoUrl: true,
+        groupName: true,
+      },
+      orderBy: [{ groupName: "asc" }, { name: "asc" }],
+    });
+  },
+
+  async findFinishedGroupMatches(tournamentId: string) {
+    return prisma.match.findMany({
+      where: {
+        tournamentId,
+        stage: MatchStage.GROUP,
+        status: MatchStatus.FINISHED,
+        homeScore: {
+          not: null,
+        },
+        awayScore: {
+          not: null,
+        },
+      },
+      select: {
+        homeTeamId: true,
+        awayTeamId: true,
+        homeScore: true,
+        awayScore: true,
       },
     });
   },
