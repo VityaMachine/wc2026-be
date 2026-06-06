@@ -1,5 +1,7 @@
 import type { ApiFootballConfig } from "./api-football.types";
 
+const WORLD_CUP_LEAGUE_ID = 1;
+
 export function getApiFootballConfig(): ApiFootballConfig {
   const baseUrl = process.env.API_FOOTBALL_BASE_URL;
   const apiKey = process.env.API_FOOTBALL_API_KEY;
@@ -15,5 +17,6 @@ export function getApiFootballConfig(): ApiFootballConfig {
   return {
     baseUrl,
     apiKey,
+    worldCupLeagueId: WORLD_CUP_LEAGUE_ID,
   };
 }

@@ -24,6 +24,11 @@ interface FixtureResultSyncSummary {
   scoringCalculated: boolean;
 }
 
+interface TeamGroupsSyncSummary {
+  updatedTeams: number;
+  skippedTeams: number;
+}
+
 interface ApiFootballFixtureTeam {
   id: number;
   name: string;
@@ -86,6 +91,10 @@ function mapApiFootballStage(round: string): MatchStage {
 }
 
 export class ApiFootballSyncService {
+  private isWorldCupGroupName(groupName: string): boolean {
+    return /^Group [A-L]$/.test(groupName);
+  }
+
   async syncWorldCupTeams(season: number): Promise<SyncSummary> {
     const tournament = await prisma.tournament.findUnique({
       where: { slug: "world-cup-2026" },
@@ -146,6 +155,50 @@ export class ApiFootballSyncService {
       created,
       updated,
       skipped,
+    };
+  }
+
+  async syncWorldCupTeamGroups(
+    season: number,
+  ): Promise<TeamGroupsSyncSummary> {
+    const response = await apiFootballClient.getWorldCupStandings(season);
+
+    let updatedTeams = 0;
+    let skippedTeams = 0;
+
+    for (const leagueResponse of response.response) {
+      for (const groupStandings of leagueResponse.league.standings) {
+        for (const standing of groupStandings) {
+          const externalTeamId = standing.team.id;
+          const groupName = standing.group;
+
+          if (
+            !externalTeamId ||
+            !groupName ||
+            !this.isWorldCupGroupName(groupName)
+          ) {
+            skippedTeams += 1;
+            continue;
+          }
+
+          const result = await prisma.team.updateMany({
+            where: { externalId: externalTeamId },
+            data: { groupName },
+          });
+
+          if (result.count === 0) {
+            skippedTeams += 1;
+            continue;
+          }
+
+          updatedTeams += result.count;
+        }
+      }
+    }
+
+    return {
+      updatedTeams,
+      skippedTeams,
     };
   }
 

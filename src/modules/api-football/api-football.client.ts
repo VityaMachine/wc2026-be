@@ -3,6 +3,7 @@ import type {
   ApiFootballConfig,
   ApiFootballFixture,
   ApiFootballResponse,
+  ApiFootballStandings,
   ApiFootballTeam,
 } from "./api-football.types";
 
@@ -74,8 +75,10 @@ export class ApiFootballClient {
   getWorldCupTeams(
     season: number,
   ): Promise<ApiFootballResponse<ApiFootballTeam>> {
+    const config = this.getConfig();
+
     return this.request<ApiFootballTeam>("/teams", {
-      league: 1,
+      league: config.worldCupLeagueId,
       season,
     });
   }
@@ -83,8 +86,21 @@ export class ApiFootballClient {
   getWorldCupFixtures(
     season: number,
   ): Promise<ApiFootballResponse<ApiFootballFixture>> {
+    const config = this.getConfig();
+
     return this.request<ApiFootballFixture>("/fixtures", {
-      league: 1,
+      league: config.worldCupLeagueId,
+      season,
+    });
+  }
+
+  getWorldCupStandings(
+    season: number,
+  ): Promise<ApiFootballResponse<ApiFootballStandings>> {
+    const config = this.getConfig();
+
+    return this.request<ApiFootballStandings>("/standings", {
+      league: config.worldCupLeagueId,
       season,
     });
   }

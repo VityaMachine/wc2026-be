@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { env } from "../../config/env";
 import { prisma } from "../../lib/prisma";
 import { apiFootballSyncService } from "./api-football.sync.service";
 
@@ -38,6 +39,23 @@ export class ApiFootballController {
       }
 
       const result = await apiFootballSyncService.syncWorldCupTeams(season);
+      return res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async syncWorldCupTeamGroups(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      await requireAdminUser(req);
+
+      const result = await apiFootballSyncService.syncWorldCupTeamGroups(
+        env.API_FOOTBALL_SEASON,
+      );
       return res.json(result);
     } catch (error) {
       next(error);

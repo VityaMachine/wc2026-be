@@ -1,6 +1,7 @@
 export interface ApiFootballConfig {
   baseUrl: string;
   apiKey: string;
+  worldCupLeagueId: number;
 }
 
 export interface ApiFootballTeam {
@@ -61,6 +62,34 @@ export interface ApiFootballFixture {
       home: number | null;
       away: number | null;
     };
+  };
+}
+
+export interface ApiFootballStanding {
+  rank: number;
+  team: {
+    id: number;
+    name: string;
+    logo: string;
+  };
+  group: string;
+  points: number;
+  goalsDiff: number;
+  all: {
+    played: number;
+    win: number;
+    draw: number;
+    lose: number;
+    goals: {
+      for: number;
+      against: number;
+    };
+  };
+}
+
+export interface ApiFootballStandings {
+  league: {
+    standings: ApiFootballStanding[][];
   };
 }
 
