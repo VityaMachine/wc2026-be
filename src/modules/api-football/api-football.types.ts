@@ -48,6 +48,20 @@ export interface ApiFootballFixture {
     home: number | null;
     away: number | null;
   };
+  score: {
+    fulltime: {
+      home: number | null;
+      away: number | null;
+    };
+    extratime: {
+      home: number | null;
+      away: number | null;
+    };
+    penalty: {
+      home: number | null;
+      away: number | null;
+    };
+  };
 }
 
 export interface ApiFootballResponse<T> {

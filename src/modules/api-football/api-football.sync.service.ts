@@ -1,6 +1,7 @@
 import { apiFootballClient } from "./api-football.client";
 import { prisma } from "../../lib/prisma";
 import { MatchStage, MatchStatus } from "@prisma/client";
+import { matchService } from "../matches/match.service";
 
 interface SyncSummary {
   fetched: number;
@@ -10,9 +11,17 @@ interface SyncSummary {
 }
 
 interface FixtureResultSyncSummary {
-  fetched: number;
-  updated: number;
-  skipped: number;
+  fixtureId: number;
+  matchId: string;
+  status: MatchStatus;
+  elapsed: number | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  homeExtraTimeScore: number | null;
+  awayExtraTimeScore: number | null;
+  homePenaltyScore: number | null;
+  awayPenaltyScore: number | null;
+  scoringCalculated: boolean;
 }
 
 interface ApiFootballFixtureTeam {
@@ -196,6 +205,7 @@ export class ApiFootballSyncService {
         awayTeamId: awayTeam.id,
         startsAt,
         status: mapApiFootballStatus(fixture.fixture.status.short),
+        elapsed: fixture.fixture.status.elapsed,
         stage: mapApiFootballStage(fixture.league.round),
         groupName: fixture.league.round,
         venueName: fixture.fixture.venue.name,
@@ -241,12 +251,55 @@ export class ApiFootballSyncService {
   async syncFixtureResult(
     fixtureId: number,
   ): Promise<FixtureResultSyncSummary> {
+    const match = await prisma.match.findFirst({
+      where: { externalFixtureId: fixtureId },
+    });
+
+    if (!match) {
+      throw new Error(`Match not found for fixture ${fixtureId}`);
+    }
+
     const response = await apiFootballClient.getFixtureById(fixtureId);
+    const fixture = response.response[0];
+
+    if (!fixture) {
+      throw new Error(`Fixture not found for fixture ${fixtureId}`);
+    }
+
+    const status = mapApiFootballStatus(fixture.fixture.status.short);
+    const data = {
+      status,
+      elapsed: fixture.fixture.status.elapsed,
+      homeScore: fixture.score.fulltime.home,
+      awayScore: fixture.score.fulltime.away,
+      homeExtraTimeScore: fixture.score.extratime.home,
+      awayExtraTimeScore: fixture.score.extratime.away,
+      homePenaltyScore: fixture.score.penalty.home,
+      awayPenaltyScore: fixture.score.penalty.away,
+    };
+
+    const updatedMatch = await prisma.match.update({
+      where: { id: match.id },
+      data,
+    });
+
+    const scoringCalculated = updatedMatch.status === MatchStatus.FINISHED;
+    if (scoringCalculated) {
+      await matchService.calculateMatchPredictionPoints(updatedMatch.id);
+    }
 
     return {
-      fetched: response.response.length,
-      updated: 0,
-      skipped: response.response.length,
+      fixtureId,
+      matchId: updatedMatch.id,
+      status: updatedMatch.status,
+      elapsed: updatedMatch.elapsed,
+      homeScore: updatedMatch.homeScore,
+      awayScore: updatedMatch.awayScore,
+      homeExtraTimeScore: updatedMatch.homeExtraTimeScore,
+      awayExtraTimeScore: updatedMatch.awayExtraTimeScore,
+      homePenaltyScore: updatedMatch.homePenaltyScore,
+      awayPenaltyScore: updatedMatch.awayPenaltyScore,
+      scoringCalculated,
     };
   }
 }

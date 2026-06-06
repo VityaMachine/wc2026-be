@@ -152,6 +152,7 @@ model Match {
   externalFixtureId Int?
   startsAt          DateTime
   status            MatchStatus @default(SCHEDULED)
+  elapsed           Int?
   stage             MatchStage
   groupName         String?
   venueName         String?

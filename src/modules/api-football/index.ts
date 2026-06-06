@@ -16,6 +16,11 @@ router.post(
   asyncHandler(apiFootballController.syncWorldCupFixtures),
 );
 router.post(
+  "/sync/fixture-result/:fixtureId",
+  authMiddleware,
+  asyncHandler(apiFootballController.syncFixtureResult),
+);
+router.post(
   "/sync/fixtures/:fixtureId/result",
   authMiddleware,
   asyncHandler(apiFootballController.syncFixtureResult),

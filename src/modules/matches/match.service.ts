@@ -11,6 +11,7 @@ export class MatchService {
       tournamentId: m.tournamentId,
       kickoffAt: m.startsAt,
       status: (m.status ?? "SCHEDULED").toLowerCase(),
+      elapsed: m.elapsed,
       homeTeam: m.homeTeam
         ? { id: m.homeTeam.id, name: m.homeTeam.name, code: m.homeTeam.code }
         : null,
