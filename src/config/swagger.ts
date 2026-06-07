@@ -23,6 +23,7 @@ export const swaggerSpec = swaggerJSDoc({
     ],
     tags: [
       { name: "Auth" },
+      { name: "Users" },
       { name: "Tournaments" },
       { name: "Matches" },
       { name: "Predictions" },
@@ -50,6 +51,20 @@ export const swaggerSpec = swaggerJSDoc({
             role: { type: "string", enum: ["USER", "ADMIN"] },
             isEmailVerified: { type: "boolean" },
             emailVerifiedAt: { type: "string", format: "date-time", nullable: true },
+          },
+        },
+        UserProfileDto: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            email: { type: "string", format: "email" },
+            username: { type: "string" },
+            firstName: { type: "string" },
+            lastName: { type: "string" },
+            role: { type: "string", enum: ["USER", "ADMIN"] },
+            isEmailVerified: { type: "boolean" },
+            emailVerifiedAt: { type: "string", format: "date-time", nullable: true },
+            createdAt: { type: "string", format: "date-time" },
           },
         },
         AuthResponse: {
@@ -121,6 +136,7 @@ export const swaggerSpec = swaggerJSDoc({
             externalId: { type: "integer", nullable: true },
             name: { type: "string" },
             code: { type: "string", nullable: true },
+            group: { type: "string", nullable: true },
             logoUrl: { type: "string", nullable: true },
           },
         },
@@ -164,6 +180,25 @@ export const swaggerSpec = swaggerJSDoc({
             awayPenaltyScore: { type: "integer", nullable: true },
             venueName: { type: "string", nullable: true },
             city: { type: "string", nullable: true },
+          },
+        },
+        MatchPaginationMetaDto: {
+          type: "object",
+          properties: {
+            page: { type: "integer", example: 1 },
+            limit: { type: "integer", example: 20 },
+            total: { type: "integer", example: 104 },
+            totalPages: { type: "integer", example: 6 },
+          },
+        },
+        MatchListResponseDto: {
+          type: "object",
+          properties: {
+            items: {
+              type: "array",
+              items: { $ref: "#/components/schemas/MatchDto" },
+            },
+            meta: { $ref: "#/components/schemas/MatchPaginationMetaDto" },
           },
         },
         PredictionDto: {
@@ -481,6 +516,25 @@ export const swaggerSpec = swaggerJSDoc({
           },
         },
       },
+      "/api/v1/users/me/profile": {
+        get: {
+          tags: ["Users"],
+          summary: "Get current user profile",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Profile returned",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/UserProfileDto" },
+                },
+              },
+            },
+            401: { description: "Unauthorized" },
+            404: { description: "User not found" },
+          },
+        },
+      },
       "/api/v1/tournaments": {
         get: {
           tags: ["Tournaments"],
@@ -700,9 +754,73 @@ export const swaggerSpec = swaggerJSDoc({
               required: false,
               schema: { type: "string" },
             },
+            {
+              name: "status",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: ["SCHEDULED", "LIVE", "FINISHED", "POSTPONED", "CANCELLED"],
+              },
+            },
+            {
+              name: "stage",
+              in: "query",
+              required: false,
+              schema: {
+                type: "string",
+                enum: [
+                  "GROUP",
+                  "ROUND_OF_32",
+                  "ROUND_OF_16",
+                  "QUARTER_FINAL",
+                  "SEMI_FINAL",
+                  "THIRD_PLACE",
+                  "FINAL",
+                ],
+              },
+            },
+            {
+              name: "groupName",
+              in: "query",
+              required: false,
+              schema: { type: "string", example: "Group A" },
+            },
+            {
+              name: "page",
+              in: "query",
+              required: false,
+              schema: { type: "integer", default: 1, minimum: 1 },
+            },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                default: 20,
+                minimum: 1,
+                maximum: 100,
+              },
+            },
           ],
           responses: {
-            200: { description: "Match list" },
+            200: {
+              description: "Paginated match list",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/MatchListResponseDto" },
+                },
+              },
+            },
+            400: {
+              description: "Invalid filters or pagination",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
           },
         },
       },

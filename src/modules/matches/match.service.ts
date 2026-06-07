@@ -1,25 +1,129 @@
+import { MatchStage, MatchStatus } from "@prisma/client";
 import { matchRepository } from "./match.repository";
 import { predictionsRepository } from "../predictions/predictions.repository";
 import { scoringService } from "../scoring/scoring.service";
 import { MatchPredictionsVisibilityResponse } from "../predictions/predictions.types";
 import { HttpError } from "../../lib/http-error";
+import { MatchListFilters, MatchListQuery } from "./match.types";
+
+const ALLOWED_MATCH_STATUSES = Object.values(MatchStatus);
+const ALLOWED_MATCH_STAGES = Object.values(MatchStage);
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
 
 export class MatchService {
-  async list(tournamentId?: string) {
-    const matches = await matchRepository.findAll(tournamentId);
-    return matches.map((m) => ({
-      id: m.id,
-      tournamentId: m.tournamentId,
-      kickoffAt: m.startsAt,
-      status: (m.status ?? "SCHEDULED").toLowerCase(),
-      elapsed: m.elapsed,
-      homeTeam: m.homeTeam
-        ? { id: m.homeTeam.id, name: m.homeTeam.name, code: m.homeTeam.code }
-        : null,
-      awayTeam: m.awayTeam
-        ? { id: m.awayTeam.id, name: m.awayTeam.name, code: m.awayTeam.code }
-        : null,
-    }));
+  async list(query: MatchListQuery = {}) {
+    const page = this.parsePage(query.page);
+    const limit = this.parseLimit(query.limit);
+    const filters = this.parseFilters(query);
+    const { items, total } = await matchRepository.findAll({
+      filters,
+      page,
+      limit,
+    });
+
+    return {
+      items: items.map((m) => ({
+        id: m.id,
+        tournamentId: m.tournamentId,
+        externalFixtureId: m.externalFixtureId,
+        kickoffAt: m.startsAt,
+        startsAt: m.startsAt,
+        stage: m.stage,
+        groupName: m.groupName,
+        status: m.status,
+        elapsed: m.elapsed,
+        homeTeam: m.homeTeam
+          ? {
+              id: m.homeTeam.id,
+              name: m.homeTeam.name,
+              code: m.homeTeam.code,
+              group: m.homeTeam.groupName,
+            }
+          : null,
+        awayTeam: m.awayTeam
+          ? {
+              id: m.awayTeam.id,
+              name: m.awayTeam.name,
+              code: m.awayTeam.code,
+              group: m.awayTeam.groupName,
+            }
+          : null,
+      })),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  private parseFilters(query: MatchListQuery): MatchListFilters {
+    const status = this.singleQueryValue(query.status);
+    if (status && !ALLOWED_MATCH_STATUSES.includes(status as MatchStatus)) {
+      throw new HttpError(400, "Invalid match status");
+    }
+
+    const stage = this.singleQueryValue(query.stage);
+    if (stage && !ALLOWED_MATCH_STAGES.includes(stage as MatchStage)) {
+      throw new HttpError(400, "Invalid match stage");
+    }
+
+    const groupName = this.singleQueryValue(query.groupName)?.trim();
+    const tournamentId = this.singleQueryValue(query.tournamentId)?.trim();
+
+    return {
+      ...(tournamentId ? { tournamentId } : {}),
+      ...(status ? { status: status as MatchStatus } : {}),
+      ...(stage ? { stage: stage as MatchStage } : {}),
+      ...(groupName ? { groupName } : {}),
+    };
+  }
+
+  private parsePage(value: unknown): number {
+    if (value === undefined) {
+      return DEFAULT_PAGE;
+    }
+
+    const page = this.parsePositiveInteger(value);
+    if (!page) {
+      throw new HttpError(400, "page must be a positive integer");
+    }
+
+    return page;
+  }
+
+  private parseLimit(value: unknown): number {
+    if (value === undefined) {
+      return DEFAULT_LIMIT;
+    }
+
+    const limit = this.parsePositiveInteger(value);
+    if (!limit || limit > MAX_LIMIT) {
+      throw new HttpError(400, "limit must be between 1 and 100");
+    }
+
+    return limit;
+  }
+
+  private parsePositiveInteger(value: unknown): number | null {
+    const rawValue = this.singleQueryValue(value);
+    if (!rawValue || !/^\d+$/.test(rawValue)) {
+      return null;
+    }
+
+    const parsed = Number(rawValue);
+    if (!Number.isSafeInteger(parsed) || parsed < 1) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  private singleQueryValue(value: unknown): string | undefined {
+    return typeof value === "string" ? value : undefined;
   }
 
   async getById(matchId: string) {

@@ -8,6 +8,7 @@ import leaderboardRouter from '../modules/leaderboard';
 import paymentsRouter from '../modules/payments';
 import adminRouter from '../modules/admin';
 import apiFootballRoutes from '../modules/api-football';
+import usersRouter from '../modules/users';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.get('/health', (_req, res) =>
 );
 
 router.use('/auth', authRouter);
+router.use('/users', usersRouter);
 router.use('/tournaments', tournamentsRouter);
 router.use('/teams', teamsRouter);
 router.use('/matches', matchesRouter);

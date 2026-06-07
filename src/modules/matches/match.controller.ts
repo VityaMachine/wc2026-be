@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { matchService } from "./match.service";
+import { MatchListQuery } from "./match.types";
 
 class MatchController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const tournamentId = req.query.tournamentId as string | undefined;
-      const data = await matchService.list(tournamentId);
+      const data = await matchService.list(req.query as MatchListQuery);
       res.json(data);
     } catch (err) {
       next(err);
