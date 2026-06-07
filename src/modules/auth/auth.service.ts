@@ -2,7 +2,7 @@ import bcryptjs from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { signAccessToken } from '../../lib/jwt';
-import { env } from '../../config/env';
+import { emailService } from '../email/email.service';
 import type { RegisterRequest, LoginRequest, AuthUserDto, AuthTokenResponse, RegisterResponse, VerifyEmailResponse } from './auth.types';
 
 const PASSWORD_VALIDATION_MESSAGE =
@@ -75,9 +75,17 @@ export class AuthService {
       },
     });
 
-    // Build verification link
-    const verificationLink = `${env.APP_URL}/api/v1/auth/verify-email?token=${token}`;
-    console.log(`\n✉️  Email verification link for ${email}:\n${verificationLink}\n`);
+    try {
+      await emailService.sendVerificationEmail({
+        to: user.email,
+        username: user.username,
+        token,
+      });
+    } catch (error) {
+      // MVP behavior: registration succeeds even if email delivery fails.
+      // To make email delivery strict later, rethrow this error instead.
+      console.error('[auth] Failed to send verification email:', error);
+    }
 
     // Return sanitized user with message
     return {
@@ -90,13 +98,14 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        emailVerifiedAt: user.emailVerifiedAt,
       },
     };
   }
 
   async verifyEmail(token: string): Promise<VerifyEmailResponse> {
     if (!token) {
-      const error = new Error('Verification token is required');
+      const error = new Error('Missing token');
       (error as any).status = 400;
       throw error;
     }
@@ -108,21 +117,21 @@ export class AuthService {
     });
 
     if (!verificationToken) {
-      const error = new Error('Invalid verification token');
+      const error = new Error('Invalid token');
       (error as any).status = 400;
       throw error;
     }
 
     // Check if already used
     if (verificationToken.usedAt) {
-      const error = new Error('Token has already been used');
+      const error = new Error('Already used token');
       (error as any).status = 400;
       throw error;
     }
 
     // Check if expired
     if (new Date() > verificationToken.expiresAt) {
-      const error = new Error('Verification token has expired');
+      const error = new Error('Expired token');
       (error as any).status = 400;
       throw error;
     }
@@ -196,6 +205,7 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        emailVerifiedAt: user.emailVerifiedAt,
       },
     };
   }
@@ -219,6 +229,7 @@ export class AuthService {
       lastName: user.lastName,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
+      emailVerifiedAt: user.emailVerifiedAt,
     };
   }
 }

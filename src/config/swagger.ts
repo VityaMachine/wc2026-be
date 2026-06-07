@@ -49,6 +49,7 @@ export const swaggerSpec = swaggerJSDoc({
             lastName: { type: "string" },
             role: { type: "string", enum: ["USER", "ADMIN"] },
             isEmailVerified: { type: "boolean" },
+            emailVerifiedAt: { type: "string", format: "date-time", nullable: true },
           },
         },
         AuthResponse: {
@@ -263,6 +264,7 @@ export const swaggerSpec = swaggerJSDoc({
         post: {
           tags: ["Auth"],
           summary: "Register user",
+          description: "Creates a user and email verification token. Sends a verification email when SMTP is configured.",
           requestBody: {
             required: true,
             content: {
@@ -290,6 +292,24 @@ export const swaggerSpec = swaggerJSDoc({
           responses: {
             201: { description: "Registered" },
             400: { description: "Invalid request" },
+          },
+        },
+      },
+      "/api/v1/auth/verify-email": {
+        get: {
+          tags: ["Auth"],
+          summary: "Verify email",
+          parameters: [
+            {
+              name: "token",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            200: { description: "Email verified successfully" },
+            400: { description: "Invalid, expired, used, or missing token" },
           },
         },
       },

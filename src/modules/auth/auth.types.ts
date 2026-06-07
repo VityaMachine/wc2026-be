@@ -21,6 +21,7 @@ export interface AuthUserDto {
   lastName: string;
   role: AuthUserRole;
   isEmailVerified: boolean;
+  emailVerifiedAt: Date | null;
 }
 
 export interface AuthTokenResponse {

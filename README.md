@@ -40,3 +40,36 @@ Build & Start
 npm run build
 npm run start
 ```
+
+## Email verification setup with Gmail SMTP
+
+Email verification uses SMTP through Nodemailer. For Gmail, do not use your regular Gmail password.
+
+1. Enable 2-Step Verification in your Google Account.
+2. Create a Google App Password for this backend app.
+3. Put that App Password into `SMTP_PASS` in your local `.env`.
+4. Keep the real `.env` file out of git and never commit real SMTP credentials.
+
+Example local email settings:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_gmail@gmail.com
+SMTP_PASS=your_gmail_app_password
+SMTP_FROM="WC2026 Predictor <your_gmail@gmail.com>"
+APP_FRONTEND_URL=http://localhost:3001
+```
+
+`APP_FRONTEND_URL` is used only for the link inside the email:
+
+```text
+http://localhost:3001/verify-email?token=...
+```
+
+The backend verification endpoint remains:
+
+```text
+/api/v1/auth/verify-email?token=...
+```
