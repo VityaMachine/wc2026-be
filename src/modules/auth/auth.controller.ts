@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from './auth.service';
-import type { RegisterRequest, LoginRequest } from './auth.types';
+import type { RegisterRequest, LoginRequest, ForgotPasswordRequest, ResetPasswordRequest } from './auth.types';
 
 export class AuthController {
   async register(req: Request, res: Response, next: NextFunction) {
@@ -27,6 +27,26 @@ export class AuthController {
     try {
       const body = req.body as LoginRequest;
       const result = await authService.login(body);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = req.body as ForgotPasswordRequest;
+      const result = await authService.forgotPassword(body);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = req.body as ResetPasswordRequest;
+      const result = await authService.resetPassword(body);
       res.status(200).json(result);
     } catch (error) {
       next(error);

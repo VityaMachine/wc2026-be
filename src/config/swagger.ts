@@ -313,6 +313,122 @@ export const swaggerSpec = swaggerJSDoc({
           },
         },
       },
+      "/api/v1/auth/forgot-password": {
+        post: {
+          tags: ["Auth"],
+          summary: "Request password reset link",
+          description: "Always returns a successful response to avoid disclosing whether an email is registered.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["email"],
+                  properties: {
+                    email: {
+                      type: "string",
+                      format: "email",
+                      example: "user@mail.com",
+                    },
+                  },
+                },
+                example: {
+                  email: "user@mail.com",
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Password reset link requested",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      message: { type: "string" },
+                    },
+                  },
+                  example: {
+                    message: "If an account with this email exists, a password reset link has been sent.",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/v1/auth/reset-password": {
+        post: {
+          tags: ["Auth"],
+          summary: "Reset password",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["token", "password"],
+                  properties: {
+                    token: {
+                      type: "string",
+                      example: "reset-token",
+                    },
+                    password: {
+                      type: "string",
+                      format: "password",
+                      minLength: 8,
+                      example: "NewPassword123!",
+                    },
+                  },
+                },
+                example: {
+                  token: "reset-token",
+                  password: "NewPassword123!",
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Password reset successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      message: { type: "string" },
+                    },
+                  },
+                  example: {
+                    message: "Password reset successfully.",
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Invalid token, token already used, token expired, or invalid password",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                  examples: {
+                    invalidToken: {
+                      value: { message: "Invalid token" },
+                    },
+                    tokenAlreadyUsed: {
+                      value: { message: "Token already used" },
+                    },
+                    tokenExpired: {
+                      value: { message: "Token expired" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       "/api/v1/auth/login": {
         post: {
           tags: ["Auth"],

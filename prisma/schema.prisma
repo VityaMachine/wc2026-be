@@ -62,6 +62,19 @@ model EmailVerificationToken {
   @@index([token])
 }
 
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
 // Models
 model User {
   id              String    @id @default(cuid())
@@ -81,6 +94,7 @@ model User {
   payments                Payment[]
   tournamentParticipants  TournamentParticipant[]
   emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
 }
 
 model Tournament {

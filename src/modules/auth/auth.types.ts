@@ -13,6 +13,15 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  password: string;
+}
+
 export interface AuthUserDto {
   id: string;
   email: string;
@@ -36,4 +45,12 @@ export interface VerifyEmailResponse {
 export interface RegisterResponse {
   message: string;
   user: AuthUserDto;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
 }

@@ -3,7 +3,18 @@ import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { signAccessToken } from '../../lib/jwt';
 import { emailService } from '../email/email.service';
-import type { RegisterRequest, LoginRequest, AuthUserDto, AuthTokenResponse, RegisterResponse, VerifyEmailResponse } from './auth.types';
+import type {
+  RegisterRequest,
+  LoginRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  AuthUserDto,
+  AuthTokenResponse,
+  RegisterResponse,
+  VerifyEmailResponse,
+  ForgotPasswordResponse,
+  ResetPasswordResponse,
+} from './auth.types';
 
 const PASSWORD_VALIDATION_MESSAGE =
   'Password must be at least 8 characters long, contain at least one letter, one digit, one special character, and no spaces';
@@ -18,6 +29,14 @@ function validatePassword(password: string): void {
 
   if (!isValid) {
     const error = new Error(PASSWORD_VALIDATION_MESSAGE);
+    (error as any).status = 400;
+    throw error;
+  }
+}
+
+function validateResetPassword(password: string): void {
+  if (!password || password.length < 8) {
+    const error = new Error('Password must be at least 8 characters long');
     (error as any).status = 400;
     throw error;
   }
@@ -153,6 +172,105 @@ export class AuthService {
 
     return {
       message: 'Email verified successfully.',
+    };
+  }
+
+  async forgotPassword(req: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
+    const response = {
+      message: 'If an account with this email exists, a password reset link has been sent.',
+    };
+
+    if (!req.email) {
+      return response;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: req.email },
+    });
+
+    if (!user) {
+      return response;
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt,
+      },
+    });
+
+    await emailService.sendPasswordResetEmail({
+      to: user.email,
+      username: user.username,
+      token,
+    });
+
+    return response;
+  }
+
+  async resetPassword(req: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+    const { token, password } = req;
+
+    if (!token) {
+      const error = new Error('Invalid token');
+      (error as any).status = 400;
+      throw error;
+    }
+
+    validateResetPassword(password);
+
+    const resetToken = await prisma.passwordResetToken.findUnique({
+      where: { token },
+    });
+
+    if (!resetToken) {
+      const error = new Error('Invalid token');
+      (error as any).status = 400;
+      throw error;
+    }
+
+    if (resetToken.usedAt) {
+      const error = new Error('Token already used');
+      (error as any).status = 400;
+      throw error;
+    }
+
+    if (new Date() > resetToken.expiresAt) {
+      const error = new Error('Token expired');
+      (error as any).status = 400;
+      throw error;
+    }
+
+    const passwordHash = await bcryptjs.hash(password, 10);
+    const usedAt = new Date();
+
+    await prisma.$transaction(async (tx) => {
+      const tokenUpdate = await tx.passwordResetToken.updateMany({
+        where: {
+          id: resetToken.id,
+          usedAt: null,
+        },
+        data: { usedAt },
+      });
+
+      if (tokenUpdate.count !== 1) {
+        const error = new Error('Token already used');
+        (error as any).status = 400;
+        throw error;
+      }
+
+      await tx.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash },
+      });
+    });
+
+    return {
+      message: 'Password reset successfully.',
     };
   }
 
