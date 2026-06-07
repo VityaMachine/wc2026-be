@@ -23,11 +23,27 @@ const parseNumber = (value: string | undefined, fallback: number) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+const requireEnv = (name: string): string => {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is required`);
+  }
+
+  return value;
+};
+
+const nodeEnv = process.env.NODE_ENV || 'development';
+const corsOrigin =
+  process.env.CORS_ORIGIN ||
+  (nodeEnv === 'production' ? requireEnv('CORS_ORIGIN') : 'http://localhost:3001');
+
 export const env = {
+  NODE_ENV: nodeEnv,
   PORT: process.env.PORT,
   DATABASE_URL: process.env.DATABASE_URL,
-  JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+  JWT_SECRET: requireEnv('JWT_SECRET'),
   JWT_EXPIRES_IN: (process.env.JWT_EXPIRES_IN || '7d') as string,
+  CORS_ORIGIN: corsOrigin,
   APP_URL: process.env.APP_URL || 'http://localhost:3000',
   APP_FRONTEND_URL: process.env.APP_FRONTEND_URL || 'http://localhost:3001',
   SMTP_HOST: process.env.SMTP_HOST,

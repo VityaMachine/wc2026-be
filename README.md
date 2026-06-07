@@ -14,7 +14,14 @@ Setup
 npm install
 ```
 
-2. Copy `.env.example` to `.env` and update `DATABASE_URL`.
+2. Copy `.env.example` to `.env` and update required environment variables.
+
+Required environment variables:
+
+- `DATABASE_URL`: PostgreSQL connection string.
+- `JWT_SECRET`: secret used to sign JWT access tokens. The app will not start without it.
+- `CORS_ORIGIN`: allowed frontend origin, for example `http://localhost:3001`.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: required for sending verification and password reset emails.
 
 3. Generate Prisma client (after setting DATABASE_URL):
 

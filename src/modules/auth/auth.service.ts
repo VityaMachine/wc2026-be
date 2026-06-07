@@ -34,14 +34,6 @@ function validatePassword(password: string): void {
   }
 }
 
-function validateResetPassword(password: string): void {
-  if (!password || password.length < 8) {
-    const error = new Error('Password must be at least 8 characters long');
-    (error as any).status = 400;
-    throw error;
-  }
-}
-
 export class AuthService {
   async register(req: RegisterRequest): Promise<RegisterResponse> {
     const { email, username, password, firstName, lastName } = req;
@@ -221,7 +213,7 @@ export class AuthService {
       throw error;
     }
 
-    validateResetPassword(password);
+    validatePassword(password);
 
     const resetToken = await prisma.passwordResetToken.findUnique({
       where: { token },

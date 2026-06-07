@@ -40,6 +40,15 @@ export const swaggerSpec = swaggerJSDoc({
       },
       schemas: {
         ErrorResponse: errorResponse,
+        RateLimitResponse: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              example: "Too many requests, please try again later.",
+            },
+          },
+        },
         UserDto: {
           type: "object",
           properties: {
@@ -316,7 +325,12 @@ export const swaggerSpec = swaggerJSDoc({
                   properties: {
                     email: { type: "string", format: "email" },
                     username: { type: "string" },
-                    password: { type: "string", format: "password" },
+                    password: {
+                      type: "string",
+                      format: "password",
+                      minLength: 8,
+                      description: "Must contain at least one letter, one digit, one special character, and no spaces.",
+                    },
                     firstName: { type: "string" },
                     lastName: { type: "string" },
                   },
@@ -327,6 +341,14 @@ export const swaggerSpec = swaggerJSDoc({
           responses: {
             201: { description: "Registered" },
             400: { description: "Invalid request" },
+            429: {
+              description: "Too many requests",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RateLimitResponse" },
+                },
+              },
+            },
           },
         },
       },
@@ -391,6 +413,14 @@ export const swaggerSpec = swaggerJSDoc({
                 },
               },
             },
+            429: {
+              description: "Too many requests",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RateLimitResponse" },
+                },
+              },
+            },
           },
         },
       },
@@ -414,6 +444,7 @@ export const swaggerSpec = swaggerJSDoc({
                       type: "string",
                       format: "password",
                       minLength: 8,
+                      description: "Must contain at least one letter, one digit, one special character, and no spaces.",
                       example: "NewPassword123!",
                     },
                   },
@@ -461,6 +492,14 @@ export const swaggerSpec = swaggerJSDoc({
                 },
               },
             },
+            429: {
+              description: "Too many requests",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RateLimitResponse" },
+                },
+              },
+            },
           },
         },
       },
@@ -494,6 +533,14 @@ export const swaggerSpec = swaggerJSDoc({
             },
             400: { description: "Invalid request" },
             403: { description: "Email not verified" },
+            429: {
+              description: "Too many requests",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RateLimitResponse" },
+                },
+              },
+            },
           },
         },
       },
