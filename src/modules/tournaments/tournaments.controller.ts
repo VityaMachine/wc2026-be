@@ -35,6 +35,16 @@ class TournamentsController {
     }
   }
 
+  async getPrizePool(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { slug } = req.params;
+      const prizePool = await tournamentsService.getPrizePool(slug);
+      res.json(prizePool);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async joinTournament(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.userId;

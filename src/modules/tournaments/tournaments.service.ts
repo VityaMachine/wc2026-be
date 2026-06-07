@@ -3,6 +3,7 @@ import { tournamentsRepository } from "./tournaments.repository";
 import {
   JoinTournamentRequest,
   PaymentStatus,
+  PrizePoolDto,
   TournamentParticipationResponse,
   TournamentParticipantResponse,
   TournamentStandingEntry,
@@ -28,6 +29,8 @@ const PAYMENT_STATUS_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
   FAILED: ["PENDING", "PAID"],
   EXPIRED: ["PENDING", "PAID"],
 };
+
+const MIN_PRIZE_POOL_PAYMENT_AMOUNT = 100;
 
 export class TournamentsService {
   async list() {
@@ -155,6 +158,39 @@ export class TournamentsService {
     };
   }
 
+  async getPrizePool(slug: string): Promise<PrizePoolDto> {
+    const tournament = await tournamentsRepository.findBySlug(slug);
+    if (!tournament) {
+      throw { status: 404, message: "Tournament not found" };
+    }
+
+    const payments = await tournamentsRepository.findPrizePoolByTournamentId(
+      tournament.id,
+    );
+    const paidUserIds = new Set<string>();
+    let totalAmount = 0;
+
+    const paymentDtos = payments.map((payment) => {
+      paidUserIds.add(payment.userId);
+      const amount = payment.amount.toNumber();
+      totalAmount += amount;
+
+      return {
+        username: payment.user.username,
+        email: payment.user.email,
+        amount,
+        paidAt: payment.paidAt?.toISOString() ?? null,
+      };
+    });
+
+    return {
+      tournamentId: tournament.id,
+      totalAmount,
+      paidUsersCount: paidUserIds.size,
+      payments: paymentDtos,
+    };
+  }
+
   async joinTournament(
     userId: string,
     slug: string,
@@ -245,12 +281,38 @@ export class TournamentsService {
       throw { status: 400, message: "email is required" };
     }
 
-    const paymentStatus = request.paymentStatus;
-    if (!PAYMENT_STATUSES.includes(paymentStatus)) {
+    const requestedPaymentStatus = request.paymentStatus ?? request.status;
+    if (
+      !requestedPaymentStatus ||
+      !PAYMENT_STATUSES.includes(requestedPaymentStatus)
+    ) {
       throw {
         status: 400,
-        message: "paymentStatus must be UNPAID, PENDING, PAID, FAILED, or EXPIRED",
+        message: "paymentStatus/status must be UNPAID, PENDING, PAID, FAILED, or EXPIRED",
       };
+    }
+
+    const paymentStatus = requestedPaymentStatus;
+    const amount = request.amount;
+    if (paymentStatus === "PAID") {
+      if (amount === undefined) {
+        throw { status: 400, message: "amount is required when status is PAID" };
+      }
+
+      if (
+        typeof amount !== "number" ||
+        !Number.isFinite(amount) ||
+        amount <= 0
+      ) {
+        throw { status: 400, message: "amount must be a positive number" };
+      }
+
+      if (amount < MIN_PRIZE_POOL_PAYMENT_AMOUNT) {
+        throw {
+          status: 400,
+          message: "Payment amount must be at least 100",
+        };
+      }
     }
 
     const tournament = await tournamentsRepository.findBySlug(slug);
@@ -272,6 +334,27 @@ export class TournamentsService {
       throw { status: 404, message: "Tournament participant not found" };
     }
 
+    if (paymentStatus === "PAID" && participant.type === "FREE") {
+      throw {
+        status: 400,
+        message: "Only PAID participants can have payment confirmed",
+      };
+    }
+
+    const existingPayment =
+      paymentStatus === "PAID"
+        ? await tournamentsRepository.findPayment(user.id, tournament.id)
+        : null;
+
+    if (paymentStatus === "PAID") {
+      if (
+        participant.paymentStatus === "PAID" ||
+        existingPayment?.status === "PAID"
+      ) {
+        throw { status: 409, message: "Payment is already confirmed" };
+      }
+    }
+
     const currentPaymentStatus = participant.paymentStatus;
     const isSameStatus = currentPaymentStatus === paymentStatus;
     const isAllowedTransition =
@@ -281,16 +364,31 @@ export class TournamentsService {
       throw { status: 400, message: "Invalid payment status transition" };
     }
 
-    const prizeEligible =
-      participant.type === "PAID" && paymentStatus === "PAID";
+    let updatedParticipant;
+    if (paymentStatus === "PAID") {
+      const confirmedAmount = amount;
+      if (confirmedAmount === undefined) {
+        throw { status: 400, message: "amount is required when status is PAID" };
+      }
 
-    const updatedParticipant =
-      await tournamentsRepository.updateParticipantPayment({
+      updatedParticipant =
+        await tournamentsRepository.confirmPaidParticipantPayment({
+        participantId: participant.id,
+        userId: user.id,
+        tournamentId: tournament.id,
+        paymentId: existingPayment?.id,
+        amount: confirmedAmount,
+        paidAt: new Date(),
+        currency: tournament.currency,
+      });
+    } else {
+      updatedParticipant = await tournamentsRepository.updateParticipantPayment({
         participantId: participant.id,
         paymentStatus,
-        prizeEligible,
-        paidAt: prizeEligible ? new Date() : null,
+        prizeEligible: false,
+        paidAt: null,
       });
+    }
 
     return {
       id: updatedParticipant.id,

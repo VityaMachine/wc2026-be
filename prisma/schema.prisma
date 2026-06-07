@@ -218,4 +218,5 @@ model Payment {
   @@index([tournamentId])
   @@index([status])
   @@index([invoiceId])
+  @@unique([userId, tournamentId])
 }

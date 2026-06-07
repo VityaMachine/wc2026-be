@@ -92,6 +92,27 @@ export const swaggerSpec = swaggerJSDoc({
             updatedAt: { type: "string", format: "date-time" },
           },
         },
+        PrizePoolPaymentDto: {
+          type: "object",
+          properties: {
+            username: { type: "string" },
+            email: { type: "string", format: "email" },
+            amount: { type: "number", example: 100 },
+            paidAt: { type: "string", format: "date-time", nullable: true },
+          },
+        },
+        PrizePoolDto: {
+          type: "object",
+          properties: {
+            tournamentId: { type: "string" },
+            totalAmount: { type: "number", example: 300 },
+            paidUsersCount: { type: "integer", example: 3 },
+            payments: {
+              type: "array",
+              items: { $ref: "#/components/schemas/PrizePoolPaymentDto" },
+            },
+          },
+        },
         TeamDto: {
           type: "object",
           properties: {
@@ -439,12 +460,24 @@ export const swaggerSpec = swaggerJSDoc({
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["email", "paymentStatus"],
+                  required: ["email"],
                   properties: {
                     email: { type: "string", format: "email" },
                     paymentStatus: {
                       type: "string",
                       enum: ["UNPAID", "PENDING", "PAID", "FAILED", "EXPIRED"],
+                      description: "Use paymentStatus or status. amount is required when the value is PAID. Only PAID participants can be confirmed as PAID.",
+                    },
+                    status: {
+                      type: "string",
+                      enum: ["UNPAID", "PENDING", "PAID", "FAILED", "EXPIRED"],
+                      description: "Backward-compatible alias for paymentStatus.",
+                    },
+                    amount: {
+                      type: "number",
+                      minimum: 100,
+                      example: 100,
+                      description: "Required when confirming PAID status. Must be at least 100.",
                     },
                   },
                 },
@@ -452,11 +485,46 @@ export const swaggerSpec = swaggerJSDoc({
             },
           },
           responses: {
-            200: { description: "Payment updated" },
-            400: { description: "Invalid request" },
+            200: {
+              description: "Payment updated",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/TournamentParticipantDto",
+                  },
+                },
+              },
+            },
+            400: { description: "Invalid request, FREE participant payment confirmation, or amount below 100" },
             401: { description: "Unauthorized" },
             403: { description: "Forbidden" },
             404: { description: "Not found" },
+            409: { description: "Payment is already confirmed" },
+          },
+        },
+      },
+      "/api/v1/tournaments/{slug}/prize-pool": {
+        get: {
+          tags: ["Tournaments"],
+          summary: "Get tournament prize pool payments",
+          parameters: [
+            {
+              name: "slug",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+            },
+          ],
+          responses: {
+            200: {
+              description: "Tournament prize pool",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/PrizePoolDto" },
+                },
+              },
+            },
+            404: { description: "Tournament not found" },
           },
         },
       },

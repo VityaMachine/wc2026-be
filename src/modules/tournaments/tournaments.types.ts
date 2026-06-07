@@ -7,7 +7,9 @@ export interface JoinTournamentRequest {
 
 export interface UpdateParticipantPaymentRequest {
   email: string;
-  paymentStatus: PaymentStatus;
+  paymentStatus?: PaymentStatus;
+  status?: PaymentStatus;
+  amount?: number;
 }
 
 export interface TournamentParticipantResponse {
@@ -44,6 +46,20 @@ export interface UpdateParticipantPaymentResponse {
   prizeEligible: boolean;
   joinedAt: string;
   updatedAt: string;
+}
+
+export interface PrizePoolPaymentDto {
+  username: string;
+  email: string;
+  amount: number;
+  paidAt: string | null;
+}
+
+export interface PrizePoolDto {
+  tournamentId: string;
+  totalAmount: number;
+  paidUsersCount: number;
+  payments: PrizePoolPaymentDto[];
 }
 
 export interface TournamentStandingTeam {
