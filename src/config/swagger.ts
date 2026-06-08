@@ -1,5 +1,7 @@
 import swaggerJSDoc from "swagger-jsdoc";
 
+const appUrl = process.env.APP_URL || "http://localhost:3000";
+
 const errorResponse = {
   type: "object",
   properties: {
@@ -17,8 +19,11 @@ export const swaggerSpec = swaggerJSDoc({
     },
     servers: [
       {
-        url: "http://localhost:3000",
-        description: "Local development server",
+        url: appUrl,
+        description:
+          process.env.NODE_ENV === "production"
+            ? "Production server"
+            : "Local development server",
       },
     ],
     tags: [

@@ -21,6 +21,7 @@ Required environment variables:
 - `DATABASE_URL`: PostgreSQL connection string.
 - `JWT_SECRET`: secret used to sign JWT access tokens. The app will not start without it.
 - `CORS_ORIGIN`: allowed frontend origin, for example `http://localhost:3001`.
+- `APP_URL`: public backend URL used by Swagger/OpenAPI and email links if needed.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: required for sending verification and password reset emails.
 
 3. Generate Prisma client (after setting DATABASE_URL):
