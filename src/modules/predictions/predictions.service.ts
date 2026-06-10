@@ -88,6 +88,11 @@ export const predictionsService = {
       matchId: prediction.matchId,
       homeScore: prediction.homeScore,
       awayScore: prediction.awayScore,
+      isExactScore: prediction.isExactScore,
+      isDrawGuessed: prediction.isDrawGuessed,
+      isGoalDifferenceGuessed: prediction.isGoalDifferenceGuessed,
+      isWinnerGuessed: prediction.isWinnerGuessed,
+      isTotalGoalsGuessed: prediction.isTotalGoalsGuessed,
     };
   },
 
@@ -99,6 +104,13 @@ export const predictionsService = {
       matchId: prediction.matchId,
       homeScore: prediction.homeScore,
       awayScore: prediction.awayScore,
+      points: prediction.points !== null ? Number(prediction.points) : null,
+      calculatedAt: prediction.calculatedAt,
+      isExactScore: prediction.isExactScore,
+      isDrawGuessed: prediction.isDrawGuessed,
+      isGoalDifferenceGuessed: prediction.isGoalDifferenceGuessed,
+      isWinnerGuessed: prediction.isWinnerGuessed,
+      isTotalGoalsGuessed: prediction.isTotalGoalsGuessed,
       match: {
         id: prediction.match.id,
         kickoffAt: prediction.match.startsAt.toISOString(),

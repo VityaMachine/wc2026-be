@@ -10,6 +10,11 @@ export interface PredictionResponse {
   matchId: string;
   homeScore: number;
   awayScore: number;
+  isExactScore: boolean;
+  isDrawGuessed: boolean;
+  isGoalDifferenceGuessed: boolean;
+  isWinnerGuessed: boolean;
+  isTotalGoalsGuessed: boolean;
 }
 
 export interface TeamData {
@@ -31,6 +36,13 @@ export interface UserPredictionResponse {
   matchId: string;
   homeScore: number;
   awayScore: number;
+  points: number | null;
+  calculatedAt: Date | null;
+  isExactScore: boolean;
+  isDrawGuessed: boolean;
+  isGoalDifferenceGuessed: boolean;
+  isWinnerGuessed: boolean;
+  isTotalGoalsGuessed: boolean;
   match: MatchData;
 }
 
@@ -46,9 +58,15 @@ export interface MatchPredictionResponse {
   matchId: string;
   userId: string;
   username: string;
+  displayName: string | null;
   homeScore: number;
   awayScore: number;
   points: number | null;
+  isExactScore: boolean;
+  isDrawGuessed: boolean;
+  isGoalDifferenceGuessed: boolean;
+  isWinnerGuessed: boolean;
+  isTotalGoalsGuessed: boolean;
   calculatedAt: Date | null;
   createdAt: Date;
 }

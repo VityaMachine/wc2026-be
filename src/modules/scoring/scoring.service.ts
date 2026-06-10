@@ -1,5 +1,6 @@
 import {
   CalculatePredictionPointsInput,
+  PredictionResultMetricsResult,
   PredictionPoints,
 } from "./scoring.types";
 
@@ -90,6 +91,48 @@ export class ScoringService {
 
     // Rule 7: No match - nothing correct
     return 0;
+  }
+
+  calculatePredictionResultMetrics(
+    input: CalculatePredictionPointsInput,
+  ): PredictionResultMetricsResult {
+    const {
+      predictedHomeScore,
+      predictedAwayScore,
+      actualHomeScore,
+      actualAwayScore,
+      matchStatus,
+    } = input;
+
+    if (
+      matchStatus !== "FINISHED" ||
+      actualHomeScore === null ||
+      actualAwayScore === null
+    ) {
+      return null;
+    }
+
+    const predictedOutcome = this.getOutcome(
+      predictedHomeScore,
+      predictedAwayScore,
+    );
+    const actualOutcome = this.getOutcome(actualHomeScore, actualAwayScore);
+    const predictedGoalDifference = predictedHomeScore - predictedAwayScore;
+    const actualGoalDifference = actualHomeScore - actualAwayScore;
+    const predictedTotalGoals = predictedHomeScore + predictedAwayScore;
+    const actualTotalGoals = actualHomeScore + actualAwayScore;
+
+    return {
+      isExactScore:
+        predictedHomeScore === actualHomeScore &&
+        predictedAwayScore === actualAwayScore,
+      isDrawGuessed: actualOutcome === "DRAW" && predictedOutcome === "DRAW",
+      isGoalDifferenceGuessed:
+        actualGoalDifference === predictedGoalDifference,
+      isWinnerGuessed:
+        actualOutcome !== "DRAW" && predictedOutcome === actualOutcome,
+      isTotalGoalsGuessed: actualTotalGoals === predictedTotalGoals,
+    };
   }
 
   /**

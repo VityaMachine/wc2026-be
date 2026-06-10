@@ -15,10 +15,22 @@ export const matchRepository = {
         take: limit,
         include: {
           homeTeam: {
-            select: { id: true, name: true, code: true, groupName: true },
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              logoUrl: true,
+              groupName: true,
+            },
           },
           awayTeam: {
-            select: { id: true, name: true, code: true, groupName: true },
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              logoUrl: true,
+              groupName: true,
+            },
           },
         },
       }),
@@ -57,17 +69,19 @@ export const matchRepository = {
         homeTeam: {
           select: {
             id: true,
-            externalId: true,
             name: true,
+            code: true,
             logoUrl: true,
+            groupName: true,
           },
         },
         awayTeam: {
           select: {
             id: true,
-            externalId: true,
             name: true,
+            code: true,
             logoUrl: true,
+            groupName: true,
           },
         },
       },

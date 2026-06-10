@@ -11,6 +11,7 @@ const ALLOWED_MATCH_STAGES = Object.values(MatchStage);
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+const WORLD_CUP_GROUP_NAME_PATTERN = /^Group [A-L]$/;
 
 export class MatchService {
   async list(query: MatchListQuery = {}) {
@@ -29,17 +30,25 @@ export class MatchService {
         tournamentId: m.tournamentId,
         externalFixtureId: m.externalFixtureId,
         kickoffAt: m.startsAt,
+        startTime: m.startsAt,
         startsAt: m.startsAt,
-        stage: m.stage,
-        groupName: m.groupName,
+        stage: this.resolveMatchStage(m.stage, m.groupName),
+        groupName: this.resolveMatchGroupName(
+          m.groupName,
+          m.homeTeam?.groupName,
+          m.awayTeam?.groupName,
+        ),
         status: m.status,
         elapsed: m.elapsed,
+        homeScore: m.homeScore,
+        awayScore: m.awayScore,
         homeTeam: m.homeTeam
           ? {
               id: m.homeTeam.id,
               name: m.homeTeam.name,
               code: m.homeTeam.code,
-              group: m.homeTeam.groupName,
+              logoUrl: m.homeTeam.logoUrl,
+              groupName: m.homeTeam.groupName,
             }
           : null,
         awayTeam: m.awayTeam
@@ -47,7 +56,8 @@ export class MatchService {
               id: m.awayTeam.id,
               name: m.awayTeam.name,
               code: m.awayTeam.code,
-              group: m.awayTeam.groupName,
+              logoUrl: m.awayTeam.logoUrl,
+              groupName: m.awayTeam.groupName,
             }
           : null,
       })),
@@ -126,6 +136,30 @@ export class MatchService {
     return typeof value === "string" ? value : undefined;
   }
 
+  private resolveMatchGroupName(
+    matchGroupName: string | null,
+    homeTeamGroupName?: string | null,
+    awayTeamGroupName?: string | null,
+  ): string | null {
+    if (matchGroupName && WORLD_CUP_GROUP_NAME_PATTERN.test(matchGroupName)) {
+      return matchGroupName;
+    }
+
+    if (homeTeamGroupName && homeTeamGroupName === awayTeamGroupName) {
+      return homeTeamGroupName;
+    }
+
+    return null;
+  }
+
+  private resolveMatchStage(stage: MatchStage, matchGroupName: string | null) {
+    if (matchGroupName && !WORLD_CUP_GROUP_NAME_PATTERN.test(matchGroupName)) {
+      return matchGroupName;
+    }
+
+    return stage;
+  }
+
   async getById(matchId: string) {
     const match = await matchRepository.findDetailsById(matchId);
     if (!match) {
@@ -134,26 +168,35 @@ export class MatchService {
 
     return {
       id: match.id,
+      tournamentId: match.tournamentId,
       externalFixtureId: match.externalFixtureId,
-      stage: match.stage,
-      groupName: match.groupName,
-      status: match.status,
+      kickoffAt: match.startsAt,
+      startTime: match.startsAt,
       startsAt: match.startsAt,
+      stage: this.resolveMatchStage(match.stage, match.groupName),
+      groupName: this.resolveMatchGroupName(
+        match.groupName,
+        match.homeTeam?.groupName,
+        match.awayTeam?.groupName,
+      ),
+      status: match.status,
       elapsed: match.elapsed,
       homeTeam: match.homeTeam
         ? {
             id: match.homeTeam.id,
-            externalId: match.homeTeam.externalId,
             name: match.homeTeam.name,
+            code: match.homeTeam.code,
             logoUrl: match.homeTeam.logoUrl,
+            groupName: match.homeTeam.groupName,
           }
         : null,
       awayTeam: match.awayTeam
         ? {
             id: match.awayTeam.id,
-            externalId: match.awayTeam.externalId,
             name: match.awayTeam.name,
+            code: match.awayTeam.code,
             logoUrl: match.awayTeam.logoUrl,
+            groupName: match.awayTeam.groupName,
           }
         : null,
       homeScore: match.homeScore,
@@ -246,15 +289,19 @@ export class MatchService {
     // Calculate points for each prediction and persist them
     const results = await Promise.all(
       predictions.map(async (prediction) => {
-        const points = scoringService.calculatePredictionPoints({
+        const calculationInput = {
           predictedHomeScore: prediction.homeScore,
           predictedAwayScore: prediction.awayScore,
           actualHomeScore: match.homeScore,
           actualAwayScore: match.awayScore,
           matchStatus: match.status,
-        });
+        };
+        const points =
+          scoringService.calculatePredictionPoints(calculationInput);
+        const metrics =
+          scoringService.calculatePredictionResultMetrics(calculationInput);
 
-        if (points === null) {
+        if (points === null || metrics === null) {
           return {
             predictionId: prediction.id,
             userId: prediction.userId,
@@ -264,6 +311,11 @@ export class MatchService {
             actualAwayScore: match.awayScore,
             points: null,
             calculatedAt: null,
+            isExactScore: false,
+            isDrawGuessed: false,
+            isGoalDifferenceGuessed: false,
+            isWinnerGuessed: false,
+            isTotalGoalsGuessed: false,
           };
         }
 
@@ -272,6 +324,7 @@ export class MatchService {
             prediction.id,
             points,
             now,
+            metrics,
           );
 
         return {
@@ -286,6 +339,12 @@ export class MatchService {
               ? Number(updatedPrediction.points)
               : null,
           calculatedAt: updatedPrediction.calculatedAt,
+          isExactScore: updatedPrediction.isExactScore,
+          isDrawGuessed: updatedPrediction.isDrawGuessed,
+          isGoalDifferenceGuessed:
+            updatedPrediction.isGoalDifferenceGuessed,
+          isWinnerGuessed: updatedPrediction.isWinnerGuessed,
+          isTotalGoalsGuessed: updatedPrediction.isTotalGoalsGuessed,
         };
       }),
     );
@@ -329,18 +388,34 @@ export class MatchService {
     return {
       canViewPredictions: true,
       hasOwnPrediction: true,
-      predictions: predictions.map((prediction) => ({
-        id: prediction.id,
-        matchId: prediction.matchId,
-        userId: prediction.userId,
-        username: prediction.user.username,
-        homeScore: prediction.homeScore,
-        awayScore: prediction.awayScore,
-        points:
-          prediction.points !== null ? Number(prediction.points) : null,
-        calculatedAt: prediction.calculatedAt,
-        createdAt: prediction.createdAt,
-      })),
+      predictions: predictions.map((prediction) => {
+        const displayName = [
+          prediction.user.firstName,
+          prediction.user.lastName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
+        return {
+          id: prediction.id,
+          matchId: prediction.matchId,
+          userId: prediction.userId,
+          username: prediction.user.username,
+          displayName: displayName || null,
+          homeScore: prediction.homeScore,
+          awayScore: prediction.awayScore,
+          points:
+            prediction.points !== null ? Number(prediction.points) : null,
+          isExactScore: prediction.isExactScore,
+          isDrawGuessed: prediction.isDrawGuessed,
+          isGoalDifferenceGuessed: prediction.isGoalDifferenceGuessed,
+          isWinnerGuessed: prediction.isWinnerGuessed,
+          isTotalGoalsGuessed: prediction.isTotalGoalsGuessed,
+          calculatedAt: prediction.calculatedAt,
+          createdAt: prediction.createdAt,
+        };
+      }),
     };
   }
 }

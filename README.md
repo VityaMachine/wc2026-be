@@ -19,6 +19,7 @@ npm install
 Required environment variables:
 
 - `DATABASE_URL`: PostgreSQL connection string.
+- `DIRECT_URL`: direct PostgreSQL connection string used by Prisma migrations when configured separately from a pooled URL.
 - `JWT_SECRET`: secret used to sign JWT access tokens. The app will not start without it.
 - `CORS_ORIGIN`: allowed frontend origin, for example `http://localhost:3001`.
 - `APP_URL`: public backend URL used by Swagger/OpenAPI and email links if needed.
@@ -30,10 +31,16 @@ Required environment variables:
 npm run prisma:generate
 ```
 
-4. Create database schema (first migration):
+4. Create database schema in development:
 
 ```bash
 npm run prisma:migrate
+```
+
+For production, run committed migrations with:
+
+```bash
+npm run db:migrate:prod
 ```
 
 Development

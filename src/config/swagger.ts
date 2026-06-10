@@ -147,36 +147,30 @@ export const swaggerSpec = swaggerJSDoc({
           type: "object",
           properties: {
             id: { type: "string" },
-            externalId: { type: "integer", nullable: true },
             name: { type: "string" },
             code: { type: "string", nullable: true },
-            group: { type: "string", nullable: true },
             logoUrl: { type: "string", nullable: true },
+            groupName: { type: "string", nullable: true },
           },
         },
         MatchDto: {
           type: "object",
           properties: {
             id: { type: "string" },
+            tournamentId: { type: "string" },
             externalFixtureId: { type: "integer", nullable: true },
+            kickoffAt: { type: "string", format: "date-time" },
+            startTime: { type: "string", format: "date-time" },
+            startsAt: { type: "string", format: "date-time" },
             stage: {
               type: "string",
-              enum: [
-                "GROUP",
-                "ROUND_OF_32",
-                "ROUND_OF_16",
-                "QUARTER_FINAL",
-                "SEMI_FINAL",
-                "THIRD_PLACE",
-                "FINAL",
-              ],
+              example: "Group Stage - 1",
             },
             groupName: { type: "string", nullable: true },
             status: {
               type: "string",
               enum: ["SCHEDULED", "LIVE", "FINISHED", "POSTPONED", "CANCELLED"],
             },
-            startsAt: { type: "string", format: "date-time" },
             elapsed: { type: "integer", nullable: true },
             homeTeam: {
               allOf: [{ $ref: "#/components/schemas/TeamDto" }],
@@ -225,6 +219,11 @@ export const swaggerSpec = swaggerJSDoc({
             homeScore: { type: "integer" },
             awayScore: { type: "integer" },
             points: { type: "number", nullable: true },
+            isExactScore: { type: "boolean" },
+            isDrawGuessed: { type: "boolean" },
+            isGoalDifferenceGuessed: { type: "boolean" },
+            isWinnerGuessed: { type: "boolean" },
+            isTotalGoalsGuessed: { type: "boolean" },
             calculatedAt: {
               type: "string",
               format: "date-time",
@@ -233,15 +232,109 @@ export const swaggerSpec = swaggerJSDoc({
             createdAt: { type: "string", format: "date-time" },
           },
         },
+        MatchPredictionDto: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            matchId: { type: "string" },
+            userId: { type: "string" },
+            username: { type: "string", example: "Demon666" },
+            displayName: {
+              type: "string",
+              nullable: true,
+              example: "Сашко Демченко",
+            },
+            homeScore: { type: "integer" },
+            awayScore: { type: "integer" },
+            points: { type: "number", nullable: true },
+            isExactScore: { type: "boolean" },
+            isDrawGuessed: { type: "boolean" },
+            isGoalDifferenceGuessed: { type: "boolean" },
+            isWinnerGuessed: { type: "boolean" },
+            isTotalGoalsGuessed: { type: "boolean" },
+            calculatedAt: {
+              type: "string",
+              format: "date-time",
+              nullable: true,
+            },
+            createdAt: { type: "string", format: "date-time" },
+          },
+        },
+        MatchPredictionsVisibilityResponse: {
+          type: "object",
+          properties: {
+            canViewPredictions: { type: "boolean" },
+            hasOwnPrediction: { type: "boolean" },
+            predictions: {
+              type: "array",
+              items: { $ref: "#/components/schemas/MatchPredictionDto" },
+            },
+          },
+        },
+        UserPredictionDto: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            matchId: { type: "string" },
+            homeScore: { type: "integer" },
+            awayScore: { type: "integer" },
+            points: { type: "number", nullable: true },
+            calculatedAt: {
+              type: "string",
+              format: "date-time",
+              nullable: true,
+            },
+            isExactScore: { type: "boolean" },
+            isDrawGuessed: { type: "boolean" },
+            isGoalDifferenceGuessed: { type: "boolean" },
+            isWinnerGuessed: { type: "boolean" },
+            isTotalGoalsGuessed: { type: "boolean" },
+            match: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                kickoffAt: { type: "string", format: "date-time" },
+                status: {
+                  type: "string",
+                  enum: [
+                    "SCHEDULED",
+                    "LIVE",
+                    "FINISHED",
+                    "POSTPONED",
+                    "CANCELLED",
+                  ],
+                },
+                homeTeam: {
+                  allOf: [{ $ref: "#/components/schemas/TeamDto" }],
+                  nullable: true,
+                },
+                awayTeam: {
+                  allOf: [{ $ref: "#/components/schemas/TeamDto" }],
+                  nullable: true,
+                },
+              },
+            },
+          },
+        },
         LeaderboardEntryDto: {
           type: "object",
           properties: {
             position: { type: "integer" },
             userId: { type: "string" },
-            username: { type: "string" },
+            username: { type: "string", example: "Demon666" },
+            displayName: {
+              type: "string",
+              nullable: true,
+              example: "Сашко Демченко",
+            },
             totalPoints: { type: "number" },
             predictionsCount: { type: "integer" },
             calculatedPredictionsCount: { type: "integer" },
+            exactScoreCount: { type: "integer" },
+            drawGuessedCount: { type: "integer" },
+            goalDifferenceGuessedCount: { type: "integer" },
+            winnerGuessedCount: { type: "integer" },
+            totalGoalsGuessedCount: { type: "integer" },
             participationType: { type: "string", nullable: true },
           },
         },
@@ -915,7 +1008,68 @@ export const swaggerSpec = swaggerJSDoc({
             },
           ],
           responses: {
-            200: { description: "Predictions visibility response" },
+            200: {
+              description: "Predictions visibility response",
+              content: {
+                "application/json": {
+                  schema: {
+                    $ref: "#/components/schemas/MatchPredictionsVisibilityResponse",
+                  },
+                  examples: {
+                    withDisplayName: {
+                      value: {
+                        canViewPredictions: true,
+                        hasOwnPrediction: true,
+                        predictions: [
+                          {
+                            id: "prediction-id",
+                            matchId: "match-id",
+                            userId: "user-id",
+                            username: "Demon666",
+                            displayName: "Сашко Демченко",
+                            homeScore: 2,
+                            awayScore: 1,
+                            points: null,
+                            isExactScore: false,
+                            isDrawGuessed: false,
+                            isGoalDifferenceGuessed: false,
+                            isWinnerGuessed: false,
+                            isTotalGoalsGuessed: false,
+                            calculatedAt: null,
+                            createdAt: "2026-06-10T12:00:00.000Z",
+                          },
+                        ],
+                      },
+                    },
+                    withoutDisplayName: {
+                      value: {
+                        canViewPredictions: true,
+                        hasOwnPrediction: true,
+                        predictions: [
+                          {
+                            id: "prediction-id",
+                            matchId: "match-id",
+                            userId: "user-id",
+                            username: "paiduser1",
+                            displayName: null,
+                            homeScore: 1,
+                            awayScore: 1,
+                            points: null,
+                            isExactScore: false,
+                            isDrawGuessed: false,
+                            isGoalDifferenceGuessed: false,
+                            isWinnerGuessed: false,
+                            isTotalGoalsGuessed: false,
+                            calculatedAt: null,
+                            createdAt: "2026-06-10T12:00:00.000Z",
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
             401: { description: "Unauthorized" },
             404: { description: "Match not found" },
           },
@@ -986,7 +1140,19 @@ export const swaggerSpec = swaggerJSDoc({
           summary: "Get current user's predictions",
           security: [{ bearerAuth: [] }],
           responses: {
-            200: { description: "Prediction list" },
+            200: {
+              description: "Prediction list",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/UserPredictionDto",
+                    },
+                  },
+                },
+              },
+            },
             401: { description: "Unauthorized" },
           },
         },
@@ -1061,12 +1227,45 @@ export const swaggerSpec = swaggerJSDoc({
           },
         },
       },
+      "/api/v1/leaderboard/paid": {
+        get: {
+          tags: ["Leaderboard"],
+          summary: "Get paid prize leaderboard",
+          responses: {
+            200: {
+              description: "Paid leaderboard",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/LeaderboardEntryDto",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       "/api/v1/leaderboard/prize": {
         get: {
           tags: ["Leaderboard"],
           summary: "Get paid prize leaderboard",
           responses: {
-            200: { description: "Prize leaderboard" },
+            200: {
+              description: "Prize leaderboard",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/LeaderboardEntryDto",
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },

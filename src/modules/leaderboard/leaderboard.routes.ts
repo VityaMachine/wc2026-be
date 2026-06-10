@@ -4,6 +4,7 @@ import { leaderboardController } from "./leaderboard.controller";
 
 const router = Router();
 
+router.get("/paid", asyncHandler(leaderboardController.getPrizeLeaderboard));
 router.get("/prize", asyncHandler(leaderboardController.getPrizeLeaderboard));
 router.get("/", asyncHandler(leaderboardController.getLeaderboard));
 

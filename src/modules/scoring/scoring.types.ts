@@ -7,3 +7,13 @@ export interface CalculatePredictionPointsInput {
 }
 
 export type PredictionPoints = number | null;
+
+export interface PredictionResultMetrics {
+  isExactScore: boolean;
+  isDrawGuessed: boolean;
+  isGoalDifferenceGuessed: boolean;
+  isWinnerGuessed: boolean;
+  isTotalGoalsGuessed: boolean;
+}
+
+export type PredictionResultMetricsResult = PredictionResultMetrics | null;

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
 import { signAccessToken } from '../../lib/jwt';
 import { emailService } from '../email/email.service';
+import { validateUsername } from './auth.validation';
 import type {
   RegisterRequest,
   LoginRequest,
@@ -46,6 +47,7 @@ export class AuthService {
     }
 
     validatePassword(password);
+    validateUsername(username);
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({

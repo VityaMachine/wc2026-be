@@ -88,11 +88,19 @@ export const predictionsRepository = {
         homeScore: true,
         awayScore: true,
         points: true,
+        isExactScore: true,
+        isDrawGuessed: true,
+        isGoalDifferenceGuessed: true,
+        isWinnerGuessed: true,
+        isTotalGoalsGuessed: true,
         calculatedAt: true,
         createdAt: true,
         user: {
           select: {
+            id: true,
             username: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },
@@ -132,12 +140,20 @@ export const predictionsRepository = {
     predictionId: string,
     points: number,
     calculatedAt: Date,
+    metrics: {
+      isExactScore: boolean;
+      isDrawGuessed: boolean;
+      isGoalDifferenceGuessed: boolean;
+      isWinnerGuessed: boolean;
+      isTotalGoalsGuessed: boolean;
+    },
   ) {
     return prisma.prediction.update({
       where: { id: predictionId },
       data: {
         points,
         calculatedAt,
+        ...metrics,
       },
     });
   },
