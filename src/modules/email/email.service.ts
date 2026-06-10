@@ -1,5 +1,10 @@
 import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { env } from "../../config/env";
+
+type SmtpTransportOptions = SMTPTransport.Options & {
+  family: 4;
+};
 
 const escapeHtml = (value: string): string =>
   value
@@ -44,7 +49,7 @@ class EmailService {
     }
 
     if (!this.transporter) {
-      this.transporter = nodemailer.createTransport({
+      const transportOptions: SmtpTransportOptions = {
         host: env.SMTP_HOST,
         port: env.SMTP_PORT,
         secure: env.SMTP_SECURE,
@@ -52,7 +57,13 @@ class EmailService {
           user: env.SMTP_USER,
           pass: env.SMTP_PASS,
         },
-      });
+        family: 4,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+      };
+
+      this.transporter = nodemailer.createTransport(transportOptions);
     }
 
     return this.transporter;
