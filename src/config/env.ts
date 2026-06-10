@@ -38,6 +38,25 @@ const corsOrigin =
   (nodeEnv === "production"
     ? requireEnv("CORS_ORIGIN")
     : "http://localhost:3000");
+const smtpFrom =
+  process.env.SMTP_FROM ||
+  process.env.SMTP_USER ||
+  "WC2026 Predictor <no-reply@localhost>";
+const extractEmailAddress = (value: string | undefined): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  const match = value.match(/<([^>]+)>/);
+  return match?.[1] || value;
+};
+const brevoSenderEmail =
+  process.env.BREVO_SENDER_EMAIL ||
+  extractEmailAddress(smtpFrom) ||
+  process.env.SMTP_USER ||
+  (nodeEnv === "production" && process.env.BREVO_API_KEY
+    ? requireEnv("BREVO_SENDER_EMAIL")
+    : "no-reply@localhost");
 
 export const env = {
   NODE_ENV: nodeEnv,
@@ -53,10 +72,10 @@ export const env = {
   SMTP_SECURE: parseBoolean(process.env.SMTP_SECURE, false),
   SMTP_USER: process.env.SMTP_USER,
   SMTP_PASS: process.env.SMTP_PASS,
-  SMTP_FROM:
-    process.env.SMTP_FROM ||
-    process.env.SMTP_USER ||
-    "WC2026 Predictor <no-reply@localhost>",
+  SMTP_FROM: smtpFrom,
+  BREVO_API_KEY: process.env.BREVO_API_KEY,
+  BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME || "WC2026 Predictor",
+  BREVO_SENDER_EMAIL: brevoSenderEmail,
   API_FOOTBALL_SCHEDULER_ENABLED: parseBoolean(
     process.env.API_FOOTBALL_SCHEDULER_ENABLED,
     true,

@@ -23,7 +23,10 @@ Required environment variables:
 - `JWT_SECRET`: secret used to sign JWT access tokens. The app will not start without it.
 - `CORS_ORIGIN`: allowed frontend origin, for example `http://localhost:3001`.
 - `APP_URL`: public backend URL used by Swagger/OpenAPI and email links if needed.
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: required for sending verification and password reset emails.
+- `BREVO_API_KEY`: Brevo Transactional Email API key used to send verification and password reset emails.
+- `BREVO_SENDER_NAME`: sender display name. Defaults to `WC2026 Predictor`.
+- `BREVO_SENDER_EMAIL`: verified Brevo sender email address. If omitted, the app falls back to `SMTP_FROM`/`SMTP_USER` for backward compatibility.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`: legacy SMTP variables. They can stay during migration, but email delivery uses Brevo when `BREVO_API_KEY` is set.
 
 3. Generate Prisma client (after setting DATABASE_URL):
 
@@ -56,25 +59,31 @@ npm run build
 npm run start
 ```
 
-## Email verification setup with Gmail SMTP
+## Email verification setup with Brevo
 
-Email verification uses SMTP through Nodemailer. For Gmail, do not use your regular Gmail password.
+Email verification and password reset emails are sent through the Brevo Transactional Email REST API.
 
-1. Enable 2-Step Verification in your Google Account.
-2. Create a Google App Password for this backend app.
-3. Put that App Password into `SMTP_PASS` in your local `.env`.
-4. Keep the real `.env` file out of git and never commit real SMTP credentials.
+1. Create a Brevo API key for Transactional Email.
+2. Verify the sender email in Brevo.
+3. Put the Brevo values into `.env` or Railway variables.
+4. Keep the real `.env` file out of git and never commit real API keys.
 
-Example local email settings:
+Example email settings:
 
 ```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=your_gmail@gmail.com
-SMTP_PASS=your_gmail_app_password
-SMTP_FROM="WC2026 Predictor <your_gmail@gmail.com>"
+BREVO_API_KEY=your_brevo_api_key_here
+BREVO_SENDER_NAME="WC2026 Predictor"
+BREVO_SENDER_EMAIL=your_verified_sender@example.com
 APP_FRONTEND_URL=http://localhost:3001
+```
+
+Production email variables for Railway:
+
+```env
+BREVO_API_KEY=your_brevo_api_key_here
+BREVO_SENDER_NAME="WC2026 Predictor"
+BREVO_SENDER_EMAIL=your_verified_sender@example.com
+APP_FRONTEND_URL=https://your-frontend-domain.example
 ```
 
 `APP_FRONTEND_URL` is used only for the link inside the email:

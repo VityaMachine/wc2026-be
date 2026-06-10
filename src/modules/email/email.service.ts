@@ -1,11 +1,6 @@
-import dns from "node:dns/promises";
-import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
-import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { env } from "../../config/env";
 
-type SmtpTransportOptions = SMTPTransport.Options & {
-  family: 4;
-};
+const BREVO_EMAIL_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
 
 const escapeHtml = (value: string): string =>
   value
@@ -27,9 +22,18 @@ export interface SendPasswordResetEmailParams {
   token: string;
 }
 
-class EmailService {
-  private transporter: Transporter | null = null;
+interface EmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
 
+interface BrevoEmailResponse {
+  messageId?: string;
+}
+
+class EmailService {
   private getVerificationLink(token: string): string {
     const baseUrl = env.APP_FRONTEND_URL.replace(/\/$/, "");
     return `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
@@ -40,55 +44,72 @@ class EmailService {
     return `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
   }
 
-  private isSmtpConfigured(): boolean {
-    return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS);
+  private isEmailProviderConfigured(): boolean {
+    return Boolean(env.BREVO_API_KEY);
   }
 
-  private async getTransporter(): Promise<Transporter | null> {
-    if (!this.isSmtpConfigured()) {
-      return null;
-    }
+  async sendMail(options: EmailOptions): Promise<void> {
+    if (!env.BREVO_API_KEY) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[email] Brevo API key missing. Email sending skipped.");
+        return;
+      }
 
-    if (!this.transporter) {
-      const records = await dns.lookup(env.SMTP_HOST as string, {
-        all: true,
-      });
-
-      console.log("[email] SMTP host:", env.SMTP_HOST);
-      console.log("[email] SMTP DNS lookup:", records);
-
-      const transportOptions: SmtpTransportOptions = {
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-        secure: env.SMTP_SECURE,
-        auth: {
-          user: env.SMTP_USER,
-          pass: env.SMTP_PASS,
-        },
-        family: 4,
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-      };
-
-      this.transporter = nodemailer.createTransport(transportOptions);
-    }
-
-    return this.transporter;
-  }
-
-  async sendMail(options: SendMailOptions): Promise<void> {
-    const transporter = await this.getTransporter();
-
-    if (!transporter) {
-      console.warn("[email] SMTP is not configured. Email sending skipped.");
+      console.error("[email] Brevo API key missing in production.");
       return;
     }
 
-    await transporter.sendMail({
-      from: env.SMTP_FROM,
-      ...options,
+    console.info("[email] Sending via Brevo API", {
+      to: options.to,
+      subject: options.subject,
+      senderEmail: env.BREVO_SENDER_EMAIL,
     });
+
+    try {
+      const response = await fetch(BREVO_EMAIL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "api-key": env.BREVO_API_KEY,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          sender: {
+            name: env.BREVO_SENDER_NAME,
+            email: env.BREVO_SENDER_EMAIL,
+          },
+          to: [{ email: options.to }],
+          subject: options.subject,
+          htmlContent: options.html,
+          textContent: options.text,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(
+          `Brevo email send failed: ${response.status} ${response.statusText} ${errorBody}`,
+        );
+      }
+
+      const result = (await response
+        .json()
+        .catch(() => null)) as BrevoEmailResponse | null;
+
+      console.info("[email] Brevo email sent", {
+        to: options.to,
+        subject: options.subject,
+        messageId: result?.messageId,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[email] Brevo send failed", {
+        to: options.to,
+        subject: options.subject,
+        message,
+      });
+      throw error;
+    }
   }
 
   async sendVerificationEmail(
@@ -97,7 +118,7 @@ class EmailService {
     const verificationLink = this.getVerificationLink(params.token);
     const safeUsername = escapeHtml(params.username);
 
-    if (!this.isSmtpConfigured() && process.env.NODE_ENV !== "production") {
+    if (!this.isEmailProviderConfigured() && process.env.NODE_ENV !== "production") {
       console.warn(
         `[email] Verification link for ${params.to}: ${verificationLink}`,
       );
@@ -181,7 +202,7 @@ class EmailService {
         ].join("\n"),
       });
 
-      if (this.isSmtpConfigured()) {
+      if (this.isEmailProviderConfigured()) {
         console.log(`[email] Verification email sent to ${params.to}`);
       }
     } catch (error) {
@@ -198,7 +219,7 @@ class EmailService {
     const resetLink = this.getPasswordResetLink(params.token);
     const safeUsername = escapeHtml(params.username);
 
-    if (!this.isSmtpConfigured() && process.env.NODE_ENV !== "production") {
+    if (!this.isEmailProviderConfigured() && process.env.NODE_ENV !== "production") {
       console.warn(`[email] Password reset link for ${params.to}: ${resetLink}`);
     }
 
@@ -280,7 +301,7 @@ class EmailService {
         ].join("\n"),
       });
 
-      if (this.isSmtpConfigured()) {
+      if (this.isEmailProviderConfigured()) {
         console.log(`[email] Password reset email sent to ${params.to}`);
       }
     } catch (error) {
