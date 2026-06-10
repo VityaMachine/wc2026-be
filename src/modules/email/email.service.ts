@@ -1,3 +1,4 @@
+import dns from "node:dns/promises";
 import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { env } from "../../config/env";
@@ -43,12 +44,19 @@ class EmailService {
     return Boolean(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS);
   }
 
-  private getTransporter(): Transporter | null {
+  private async getTransporter(): Promise<Transporter | null> {
     if (!this.isSmtpConfigured()) {
       return null;
     }
 
     if (!this.transporter) {
+      const records = await dns.lookup(env.SMTP_HOST as string, {
+        all: true,
+      });
+
+      console.log("[email] SMTP host:", env.SMTP_HOST);
+      console.log("[email] SMTP DNS lookup:", records);
+
       const transportOptions: SmtpTransportOptions = {
         host: env.SMTP_HOST,
         port: env.SMTP_PORT,
@@ -70,7 +78,7 @@ class EmailService {
   }
 
   async sendMail(options: SendMailOptions): Promise<void> {
-    const transporter = this.getTransporter();
+    const transporter = await this.getTransporter();
 
     if (!transporter) {
       console.warn("[email] SMTP is not configured. Email sending skipped.");
