@@ -1,4 +1,3 @@
-import { prisma } from "../../lib/prisma";
 import { apiFootballSyncService } from "../api-football/api-football.sync.service";
 import { env } from "../../config/env";
 
@@ -35,7 +34,7 @@ export class SyncSchedulerService {
     }, env.API_FOOTBALL_REGULAR_SYNC_INTERVAL_MS);
 
     this.liveSyncTimer = setInterval(() => {
-      void this.syncLiveFixturesIfNeeded();
+      void this.syncLiveFixtures();
     }, env.API_FOOTBALL_LIVE_SYNC_INTERVAL_MS);
   }
 
@@ -54,20 +53,8 @@ export class SyncSchedulerService {
     this.isSyncRunning = false;
   }
 
-  private async syncLiveFixturesIfNeeded() {
-    try {
-      const liveMatchesCount = await prisma.match.count({
-        where: { status: "LIVE" },
-      });
-
-      if (liveMatchesCount === 0) {
-        return;
-      }
-
-      await this.syncFixtures("live");
-    } catch (error) {
-      console.error("API-Football live sync check failed", error);
-    }
+  private async syncLiveFixtures() {
+    await this.syncLiveFixturesOnce("live");
   }
 
   private async syncFixtures(reason: SyncReason) {
@@ -86,6 +73,27 @@ export class SyncSchedulerService {
         );
 
       console.log(`API-Football ${reason} sync finished`, result);
+    } catch (error) {
+      console.error(`API-Football ${reason} sync failed`, error);
+    } finally {
+      this.isSyncRunning = false;
+    }
+  }
+
+  private async syncLiveFixturesOnce(reason: SyncReason) {
+    if (this.isSyncRunning) {
+      console.log(
+        "API-Football live sync skipped because another sync is running",
+      );
+      return;
+    }
+
+    this.isSyncRunning = true;
+
+    try {
+      await apiFootballSyncService.syncLiveWorldCupFixtures(
+        env.API_FOOTBALL_SEASON,
+      );
     } catch (error) {
       console.error(`API-Football ${reason} sync failed`, error);
     } finally {

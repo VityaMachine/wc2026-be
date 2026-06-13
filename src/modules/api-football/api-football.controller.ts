@@ -82,6 +82,23 @@ export class ApiFootballController {
     }
   }
 
+  async syncLiveWorldCupFixtures(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      await requireAdminUser(req);
+
+      const result = await apiFootballSyncService.syncLiveWorldCupFixtures(
+        env.API_FOOTBALL_SEASON,
+      );
+      return res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async syncFixtureResult(
     req: Request,
     res: Response,

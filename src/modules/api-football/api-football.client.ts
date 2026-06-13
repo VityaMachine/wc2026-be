@@ -94,6 +94,18 @@ export class ApiFootballClient {
     });
   }
 
+  getLiveWorldCupFixtures(
+    season: number,
+  ): Promise<ApiFootballResponse<ApiFootballFixture>> {
+    const config = this.getConfig();
+
+    return this.request<ApiFootballFixture>("/fixtures", {
+      league: config.worldCupLeagueId,
+      season,
+      live: "all",
+    });
+  }
+
   getWorldCupStandings(
     season: number,
   ): Promise<ApiFootballResponse<ApiFootballStandings>> {

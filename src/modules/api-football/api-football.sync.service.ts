@@ -24,6 +24,14 @@ interface FixtureResultSyncSummary {
   scoringCalculated: boolean;
 }
 
+interface LiveFixtureSyncSummary {
+  fetched: number;
+  updated: number;
+  skipped: number;
+  notFound: number;
+  failed: number;
+}
+
 interface TeamGroupsSyncSummary {
   updatedTeams: number;
   skippedTeams: number;
@@ -62,6 +70,11 @@ function mapApiFootballStatus(status: string): MatchStatus {
     default:
       return MatchStatus.SCHEDULED;
   }
+}
+
+function normalizeExternalFixtureId(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 function mapApiFootballStage(round: string): MatchStage {
@@ -218,7 +231,7 @@ export class ApiFootballSyncService {
     let skipped = 0;
 
     for (const fixture of response.response) {
-      const externalFixtureId = fixture.fixture.id;
+      const externalFixtureId = normalizeExternalFixtureId(fixture.fixture.id);
       const startsAt = new Date(fixture.fixture.date);
       const homeExternalId = fixture.teams.home.id;
       const awayExternalId = fixture.teams.away.id;
@@ -301,11 +314,125 @@ export class ApiFootballSyncService {
     };
   }
 
+  async syncLiveWorldCupFixtures(
+    season: number,
+  ): Promise<LiveFixtureSyncSummary> {
+    console.log("API-Football live sync started");
+
+    const tournament = await prisma.tournament.findUnique({
+      where: { slug: "world-cup-2026" },
+      select: { id: true },
+    });
+
+    if (!tournament) {
+      throw { status: 404, message: "Tournament not found" };
+    }
+
+    const response = await apiFootballClient.getLiveWorldCupFixtures(season);
+    console.log(
+      `API-Football live sync returned ${response.response.length} live fixtures`,
+    );
+
+    let updated = 0;
+    let skipped = 0;
+    let notFound = 0;
+    let failed = 0;
+
+    for (const fixture of response.response) {
+      const externalFixtureId = normalizeExternalFixtureId(fixture.fixture.id);
+      const statusShort = fixture.fixture.status.short;
+      const mappedStatus = mapApiFootballStatus(statusShort);
+      const elapsed = fixture.fixture.status.elapsed;
+      const homeScore = fixture.goals.home;
+      const awayScore = fixture.goals.away;
+      const startsAt = new Date(fixture.fixture.date);
+
+      console.log(
+        [
+          "API-Football live fixture processing",
+          `fixtureId=${String(fixture.fixture.id)}`,
+          `status=${statusShort}`,
+          `mappedStatus=${mappedStatus}`,
+          `elapsed=${elapsed ?? "null"}`,
+          `score=${homeScore ?? "null"}-${awayScore ?? "null"}`,
+          `teams=${fixture.teams.home.name} vs ${fixture.teams.away.name}`,
+        ].join(" "),
+      );
+
+      if (!externalFixtureId) {
+        console.log("API-Football live fixture skipped: invalid fixture id");
+        skipped += 1;
+        continue;
+      }
+
+      const match = await prisma.match.findUnique({
+        where: {
+          externalFixtureId_tournamentId: {
+            externalFixtureId,
+            tournamentId: tournament.id,
+          },
+        },
+      });
+
+      if (!match) {
+        console.log(
+          `API-Football live fixture ${externalFixtureId}: matching DB match not found`,
+        );
+        notFound += 1;
+        continue;
+      }
+
+      console.log(
+        `API-Football live fixture ${externalFixtureId}: matching DB match found id=${match.id} currentStatus=${match.status}`,
+      );
+
+      try {
+        await prisma.match.update({
+          where: { id: match.id },
+          data: {
+            status: mappedStatus,
+            elapsed,
+            homeScore,
+            awayScore,
+            ...(Number.isNaN(startsAt.getTime()) ? {} : { startsAt }),
+          },
+        });
+
+        console.log(
+          `API-Football live fixture ${externalFixtureId}: DB update succeeded`,
+        );
+        updated += 1;
+      } catch (error) {
+        console.error(
+          `API-Football live fixture ${externalFixtureId}: DB update failed`,
+          error,
+        );
+        failed += 1;
+      }
+    }
+
+    const summary = {
+      fetched: response.response.length,
+      updated,
+      skipped,
+      notFound,
+      failed,
+    };
+
+    console.log("API-Football live sync finished", summary);
+    return summary;
+  }
+
   async syncFixtureResult(
     fixtureId: number,
   ): Promise<FixtureResultSyncSummary> {
+    const externalFixtureId = normalizeExternalFixtureId(fixtureId);
+    if (!externalFixtureId) {
+      throw new Error(`Invalid fixture id ${fixtureId}`);
+    }
+
     const match = await prisma.match.findFirst({
-      where: { externalFixtureId: fixtureId },
+      where: { externalFixtureId },
     });
 
     if (!match) {
@@ -323,8 +450,14 @@ export class ApiFootballSyncService {
     const data = {
       status,
       elapsed: fixture.fixture.status.elapsed,
-      homeScore: fixture.score.fulltime.home,
-      awayScore: fixture.score.fulltime.away,
+      homeScore:
+        status === MatchStatus.FINISHED
+          ? fixture.score.fulltime.home
+          : fixture.goals.home,
+      awayScore:
+        status === MatchStatus.FINISHED
+          ? fixture.score.fulltime.away
+          : fixture.goals.away,
       homeExtraTimeScore: fixture.score.extratime.home,
       awayExtraTimeScore: fixture.score.extratime.away,
       homePenaltyScore: fixture.score.penalty.home,

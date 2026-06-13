@@ -1331,6 +1331,19 @@ export const swaggerSpec = swaggerJSDoc({
           },
         },
       },
+      "/api/v1/api-football/sync/live-fixtures": {
+        post: {
+          tags: ["API-Football Admin"],
+          summary: "ADMIN only: sync live World Cup fixtures",
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: { description: "Live fixture sync summary" },
+            401: { description: "Unauthorized" },
+            403: { description: "Forbidden" },
+            404: { description: "Tournament not found" },
+          },
+        },
+      },
       "/api/v1/api-football/sync/fixtures/{fixtureId}/result": {
         post: {
           tags: ["API-Football Admin"],
